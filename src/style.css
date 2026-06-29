@@ -1097,7 +1097,7 @@ textarea {
   min-height: 39px;
   border: 1px solid #e6edf6;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.82);
+  background: #ffffff;
   color: var(--text);
   padding: 9px 12px;
   outline: none;
@@ -1201,7 +1201,7 @@ input:disabled {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(92, 108, 132, 0.28);
+  background: rgba(72, 86, 110, 0.48);
   animation: fade-in 180ms ease both;
 }
 
@@ -1210,6 +1210,9 @@ input:disabled {
   max-height: 92vh;
   overflow: auto;
   padding: 18px;
+  background: #ffffff;
+  backdrop-filter: none;
+  box-shadow: 0 28px 70px rgba(42, 55, 78, 0.26);
   animation: modal-in 220ms ease both;
 }
 
@@ -1242,7 +1245,7 @@ input:disabled {
 .report-hero .month-picker {
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(248, 251, 255, 0.78);
+  background: #f8fbff;
 }
 
 .image-editor {
