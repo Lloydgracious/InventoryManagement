@@ -651,9 +651,10 @@ function Dashboard({
                 <div className={`client-avatar ${index % 2 ? 'green' : 'blue'}`}>
                   {index % 2 ? <Users /> : <Building2 />}
                 </div>
-                <div>
+                <div className="client-details">
                   <strong>{client.name}</strong>
-                  <span>{client.phone} - {client.note}</span>
+                  <span>{client.phone}</span>
+                  <small>{client.note}</small>
                 </div>
                 <button className="btn danger" type="button" onClick={() => removeClient(client.id)}>
                   <Trash2 />
