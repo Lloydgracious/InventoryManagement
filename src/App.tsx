@@ -150,6 +150,7 @@ function App() {
   const [soldItems, setSoldItems] = useState<SoldItem[]>(initialSoldItems)
   const [cancelledItems, setCancelledItems] = useState<CancelledItem[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [addingProduct, setAddingProduct] = useState<Product | null>(null)
   const [editingCancelledItem, setEditingCancelledItem] = useState<CancelledItem | null>(null)
   const [addingCancelledItem, setAddingCancelledItem] = useState<CancelledItem | null>(null)
   const [sellingProduct, setSellingProduct] = useState<Product | null>(null)
@@ -246,6 +247,26 @@ function App() {
       ),
     )
     setEditingProduct(null)
+  }
+
+  const addProduct = (newProduct: Product) => {
+    setProducts((current) => {
+      const totalQuantity = Math.max(0, newProduct.totalQuantity)
+      const soldQuantity = Math.max(0, Math.min(newProduct.soldQuantity, totalQuantity))
+      const nextProduct: Product = {
+        ...newProduct,
+        id: Math.max(0, ...current.map((product) => product.id)) + 1,
+        name: newProduct.name.trim(),
+        totalQuantity,
+        soldQuantity,
+        price: Math.max(0, newProduct.price),
+        costPrice: Math.max(0, newProduct.costPrice),
+        addedDate: today,
+      }
+
+      return [nextProduct, ...current]
+    })
+    setAddingProduct(null)
   }
 
   const recordSale = (product: Product, quantity: number, notes: string) => {
@@ -426,7 +447,22 @@ function App() {
                   />
                 )}
                 {page === 'Inventory' && (
-                  <InventoryTable products={products} onEdit={setEditingProduct} onSell={setSellingProduct} />
+                  <InventoryTable
+                    products={products}
+                    onAdd={() =>
+                      setAddingProduct({
+                        id: Date.now(),
+                        name: '',
+                        totalQuantity: 0,
+                        soldQuantity: 0,
+                        price: 0,
+                        costPrice: 0,
+                        addedDate: today,
+                      })
+                    }
+                    onEdit={setEditingProduct}
+                    onSell={setSellingProduct}
+                  />
                 )}
                 {page === 'Sold Items' && (
                   <SoldItemsTable soldItems={soldItems} onCancel={setCancellingSale} />
@@ -457,6 +493,15 @@ function App() {
 
       {editingProduct && (
         <EditProductModal product={editingProduct} onClose={() => setEditingProduct(null)} onSave={saveProduct} />
+      )}
+      {addingProduct && (
+        <EditProductModal
+          product={addingProduct}
+          title="Add Product"
+          saveLabel="Add Product"
+          onClose={() => setAddingProduct(null)}
+          onSave={addProduct}
+        />
       )}
       {editingCancelledItem && (
         <EditCancelledItemModal
@@ -671,10 +716,12 @@ function Dashboard({
 
 function InventoryTable({
   products,
+  onAdd,
   onEdit,
   onSell,
 }: {
   products: Product[]
+  onAdd: () => void
   onEdit: (product: Product) => void
   onSell: (product: Product) => void
 }) {
@@ -689,10 +736,16 @@ function InventoryTable({
           <h3>{products.length} product lines under watch.</h3>
           <p>{totalRemaining} units available with {amount(totalValue)} estimated shelf value.</p>
         </div>
-        <div className="module-stats">
-          <span><strong>{totalRemaining}</strong>Available</span>
-          <span><strong>{lowStock}</strong>Low stock</span>
-          <span><strong>{amount(totalValue)}</strong>Value</span>
+        <div className="inventory-hero-side">
+          <div className="module-stats">
+            <span><strong>{totalRemaining}</strong>Available</span>
+            <span><strong>{lowStock}</strong>Low stock</span>
+            <span><strong>{amount(totalValue)}</strong>Value</span>
+          </div>
+          <button className="btn primary add-product-btn" type="button" onClick={onAdd}>
+            <PackagePlus />
+            Add Product
+          </button>
         </div>
       </section>
 
@@ -1033,10 +1086,14 @@ function SimpleList({ rows, empty }: { rows: { title: string; detail: string }[]
 
 function EditProductModal({
   product,
+  title = 'Edit Product',
+  saveLabel = 'Save',
   onClose,
   onSave,
 }: {
   product: Product
+  title?: string
+  saveLabel?: string
   onClose: () => void
   onSave: (product: Product) => void
 }) {
@@ -1061,7 +1118,7 @@ function EditProductModal({
     <div className="modal-backdrop">
       <div className="modal">
         <div className="modal-head">
-          <h3>Edit Product</h3>
+          <h3>{title}</h3>
           <button className="icon-btn" title="Close" onClick={onClose}><X /></button>
         </div>
         <div className="form-grid">
@@ -1112,7 +1169,7 @@ function EditProductModal({
         <div className="modal-actions">
           <button className="btn" onClick={onClose}>Cancel</button>
           <button className="btn primary" onClick={() => onSave(draft)} disabled={!draft.name.trim()}>
-            Save
+            {saveLabel}
           </button>
         </div>
       </div>

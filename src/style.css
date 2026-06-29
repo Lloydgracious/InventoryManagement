@@ -743,6 +743,15 @@ textarea:focus-visible {
   color: #7b879d;
 }
 
+.inventory-hero-side {
+  display: grid;
+  gap: 12px;
+}
+
+.add-product-btn {
+  width: 100%;
+}
+
 .module-stats,
 .metric-grid,
 .metric-grid.compact,
@@ -1779,13 +1788,13 @@ input:disabled {
 
   .inventory-card-click {
     display: grid;
-    grid-template-columns: 66px minmax(0, 1fr);
+    grid-template-columns: 92px minmax(0, 1fr);
     align-items: center;
   }
 
   .product-image.large {
-    width: 66px;
-    height: 66px;
+    width: 92px;
+    height: 92px;
     border-width: 0 1px 0 0;
     border-radius: 0;
   }
@@ -1799,7 +1808,7 @@ input:disabled {
   }
 
   .inventory-card-actions {
-    padding: 0 12px 12px 78px;
+    padding: 0 12px 12px 104px;
   }
 
   .metric-grid,
@@ -1996,6 +2005,19 @@ input:disabled {
   .module-stats strong,
   .revenue-kpis strong {
     font-size: 18px;
+  }
+
+  .inventory-card-click {
+    grid-template-columns: 84px minmax(0, 1fr);
+  }
+
+  .product-image.large {
+    width: 84px;
+    height: 84px;
+  }
+
+  .inventory-card-actions {
+    padding-left: 96px;
   }
 
   .client-form,
