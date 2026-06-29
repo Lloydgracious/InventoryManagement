@@ -1783,32 +1783,86 @@ input:disabled {
   }
 
   .inventory-card {
+    padding: 10px;
     border-radius: 18px;
   }
 
   .inventory-card-click {
     display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    align-items: center;
+    grid-template-columns: 100px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
   }
 
   .product-image.large {
-    width: 92px;
-    height: 92px;
-    border-width: 0 1px 0 0;
-    border-radius: 0;
+    width: 100px;
+    height: 100px;
+    border-width: 1px;
+    border-radius: 16px;
   }
 
   .inventory-card-body {
-    padding: 12px;
+    gap: 9px;
+    padding: 0;
+  }
+
+  .inventory-title-row {
+    gap: 8px;
+  }
+
+  .inventory-title-row h4 {
+    margin-top: 4px;
+    font-size: 14px;
+    line-height: 1.22;
+  }
+
+  .inventory-title-row > strong {
+    font-size: 13px;
+  }
+
+  .stock-chip {
+    min-height: 18px;
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
+  .profit-line,
+  .cancelled-note {
+    font-size: 12px;
   }
 
   .inventory-stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .inventory-stats span {
+    min-height: 50px;
+    padding: 7px 5px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 10px;
+  }
+
+  .inventory-stats strong {
+    font-size: 18px;
   }
 
   .inventory-card-actions {
-    padding: 0 12px 12px 104px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+    margin-left: 112px;
+    padding: 10px 0 0;
+  }
+
+  .inventory-card-actions .icon-btn,
+  .inventory-card-actions .btn {
+    min-height: 42px;
+  }
+
+  .inventory-card-actions .icon-btn {
+    width: 42px;
   }
 
   .metric-grid,
@@ -2008,16 +2062,18 @@ input:disabled {
   }
 
   .inventory-card-click {
-    grid-template-columns: 84px minmax(0, 1fr);
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
   }
 
   .product-image.large {
-    width: 84px;
-    height: 84px;
+    width: 92px;
+    height: 92px;
   }
 
   .inventory-card-actions {
-    padding-left: 96px;
+    margin-left: 102px;
+    padding-left: 0;
   }
 
   .client-form,
@@ -2053,5 +2109,18 @@ input:disabled {
   .metric-grid,
   .metric-grid.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-card-click {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .product-image.large {
+    width: 82px;
+    height: 82px;
+  }
+
+  .inventory-card-actions {
+    margin-left: 92px;
   }
 }
