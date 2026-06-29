@@ -1499,13 +1499,36 @@ input:disabled {
     padding: 18px 18px 24px;
   }
 
-  .page-intro,
+  .page-intro {
+    grid-template-columns: minmax(0, 1fr) 210px;
+    gap: 16px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-grid,
+  .metric-grid,
+  .metric-grid.compact,
+  .inventory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-form .btn {
+    grid-column: 1 / -1;
+  }
+
   .module-hero {
     grid-template-columns: 1fr;
   }
 
   .date-card {
-    width: min(224px, 100%);
+    width: 100%;
   }
 }
 
@@ -1565,27 +1588,152 @@ input:disabled {
     transform: none;
   }
 
+  .main {
+    gap: 16px;
+    padding: 10px 12px 20px;
+  }
+
+  .page-intro {
+    grid-template-columns: minmax(0, 1fr) 132px;
+    align-items: center;
+    gap: 12px;
+  }
+
   .page-intro h1 {
-    font-size: 32px;
+    font-size: 27px;
   }
 
   .page-intro p {
-    font-size: 16px;
+    font-size: 14px;
+  }
+
+  .date-card {
+    min-height: 64px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .date-card > svg {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+  }
+
+  .date-card strong {
+    font-size: 28px;
+  }
+
+  .date-card span {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto;
+    gap: 6px;
+    font-size: 11px;
   }
 
   .kpi-grid,
   .metric-grid,
   .metric-grid.compact,
-  .module-stats,
-  .client-form,
-  .revenue-kpis,
-  .form-grid {
+  .inventory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .kpi-card {
+    min-height: 132px;
+    gap: 7px;
+    padding: 12px;
+  }
+
+  .kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .kpi-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .kpi-card span,
+  .kpi-card small {
+    font-size: 11px;
+  }
+
+  .kpi-card strong {
+    font-size: 22px;
+  }
+
+  .dashboard-grid,
+  .dashboard-panels,
+  .command-grid,
+  .module-hero {
     grid-template-columns: 1fr;
   }
 
-  .sales-bar-row,
+  .module-stats,
+  .revenue-kpis,
+  .client-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-form input:first-child,
+  .client-form .btn {
+    grid-column: 1 / -1;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-visual-card,
+  .client-card,
+  .card,
+  .module-hero {
+    padding: 13px;
+  }
+
+  .section-head {
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+
+  .sales-bar-row {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    gap: 8px 10px;
+    min-height: 70px;
+    padding: 10px;
+  }
+
+  .sales-bar-row .product-image {
+    grid-row: 1 / span 2;
+    width: 42px;
+    height: 42px;
+  }
+
+  .sales-bar-row > strong {
+    align-self: end;
+    font-size: 13px;
+  }
+
+  .sales-bar-row .bar-track {
+    grid-column: 2 / -1;
+  }
+
+  .sales-bar-row b {
+    align-self: end;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .sales-bar-row b small {
+    font-size: 11px;
+  }
+
   .client-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
   }
 
   .client-row {
@@ -1593,15 +1741,36 @@ input:disabled {
   }
 
   .client-row .btn {
+    grid-column: 1 / -1;
     width: 100%;
   }
 
-  .sales-bar-row b {
-    text-align: left;
+  .client-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .metric-card {
+    min-height: 92px;
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .metric-card::before {
+    width: 40px;
+    height: 40px;
+  }
+
+  .metric-label span {
+    font-size: 11px;
+  }
+
+  .metric-card strong {
+    font-size: 21px;
   }
 
   .form-grid .full {
-    grid-column: auto;
+    grid-column: 1 / -1;
   }
 
   .image-editor {
@@ -1619,5 +1788,27 @@ input:disabled {
   .app-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 430px) {
+  .page-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .date-card {
+    width: min(180px, 100%);
+  }
+
+  .kpi-grid,
+  .metric-grid,
+  .metric-grid.compact,
+  .inventory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid,
+  .client-form {
+    grid-template-columns: 1fr;
   }
 }
