@@ -1,21 +1,27 @@
 import { useMemo, useState } from 'react'
 import {
   Ban,
-  Bell,
   Boxes,
+  Building2,
   CalendarDays,
   Check,
+  CircleDollarSign,
   ClipboardList,
   Edit3,
   Image as ImageIcon,
-  PackagePlus,
   Loader2,
   LayoutDashboard,
+  PackagePlus,
   PackageCheck,
+  PackageX,
+  Plus,
   ShoppingCart,
+  Trash2,
   TrendingDown,
   TrendingUp,
   Upload,
+  Users,
+  Wallet,
   X,
 } from 'lucide-react'
 
@@ -121,12 +127,12 @@ const initialSoldItems: SoldItem[] = [
   { id: 103, productId: 4, productName: 'Desk Organizer', quantity: 8, salePrice: 14, costPrice: 8, date: '2026-06-07', notes: 'Store sale' },
 ]
 
-const pages: { page: Page; icon: typeof LayoutDashboard }[] = [
-  { page: 'Dashboard', icon: LayoutDashboard },
-  { page: 'Inventory', icon: Boxes },
-  { page: 'Sold Items', icon: ShoppingCart },
-  { page: 'Cancelled Items', icon: Ban },
-  { page: 'Monthly Report', icon: CalendarDays },
+const navItems: { label: string; page: Page; icon: typeof LayoutDashboard }[] = [
+  { label: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
+  { label: 'Products', page: 'Inventory', icon: Boxes },
+  { label: 'Sales', page: 'Sold Items', icon: ShoppingCart },
+  { label: 'Cancelled Items', page: 'Cancelled Items', icon: Ban },
+  { label: 'Monthly Report', page: 'Monthly Report', icon: CalendarDays },
 ]
 
 const amount = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
@@ -365,22 +371,24 @@ function App() {
   return (
     <div className="app">
       <div className="app-frame">
-        <aside className="dock">
-          <div className="dock-brand">
+        <aside className="sidebar">
+          <div className="brand">
             <PackageCheck />
-            <span>GI</span>
+            <strong>GI</strong>
           </div>
-          <nav className="dock-nav" aria-label="Primary">
-            {pages.map((item) => {
+
+          <nav className="nav" aria-label="Primary">
+            {navItems.map((item) => {
               const Icon = item.icon
               return (
                 <button
-                  className={`dock-button ${page === item.page ? 'active' : ''}`}
-                  key={item.page}
+                  className={`nav-button ${page === item.page ? 'active' : ''}`}
+                  key={item.label}
                   onClick={() => switchPage(item.page)}
-                  title={item.page}
+                  title={item.label}
                 >
                   <Icon />
+                  <span>{item.label}</span>
                 </button>
               )
             })}
@@ -388,26 +396,21 @@ function App() {
         </aside>
 
         <div className="workspace">
-          <header className="experience-header">
-            <div className="welcome-card">
-              <div>
-                <span>Hello, Shop Team!</span>
-                <h1>{page}</h1>
-                <p>Track inventory, clients, sold items, cancellations, and monthly movement.</p>
-              </div>
-              <div className="mini-calendar">
-                <strong>{today.slice(8)}</strong>
-                <span>{today.slice(0, 7)}</span>
-              </div>
-            </div>
-            <div className="quick-panel">
-              <button className="quick-tool"><CalendarDays /></button>
-              <button className="quick-tool"><Bell /></button>
-              <button className="quick-tool"><ClipboardList /></button>
-            </div>
-          </header>
-
           <main className="main">
+            <section className="page-intro">
+              <div>
+                <h1>{page === 'Dashboard' ? 'Hello, Shop Team!' : page}</h1>
+                <p>Here's what's happening with your inventory today.</p>
+              </div>
+              <div className="date-card">
+                <CalendarDays />
+                <strong>{today.slice(8)}</strong>
+                <span>
+                  <b>Sunday</b>
+                  June 2026
+                </span>
+              </div>
+            </section>
             <section className="content">
               <div className={`page-shell ${isPageLoading ? 'loading' : ''}`}>
                 {isPageLoading && (
@@ -418,6 +421,7 @@ function App() {
                 {page === 'Dashboard' && (
                   <Dashboard
                     metrics={dashboard}
+                    products={products}
                     soldItems={soldItems}
                   />
                 )}
@@ -443,6 +447,10 @@ function App() {
                 )}
               </div>
             </section>
+            <footer className="app-footer">
+              <span>© 2026 InventoryPro Admin. All rights reserved.</span>
+              <span>v1.0.0</span>
+            </footer>
           </main>
         </div>
       </div>
@@ -476,9 +484,11 @@ function App() {
 
 function Dashboard({
   metrics,
+  products,
   soldItems,
 }: {
   metrics: DashboardMetrics
+  products: Product[]
   soldItems: SoldItem[]
 }) {
   const [clients, setClients] = useState([
@@ -499,6 +509,50 @@ function Dashboard({
   const totalCost = sales.reduce((sum, item) => sum + item.quantity * item.costPrice, 0)
   const monthlySoldQuantity = monthlySales.reduce((sum, item) => sum + item.quantity, 0)
   const maxMonthlyQuantity = Math.max(1, ...monthlySales.map((item) => item.quantity))
+  const dashboardCards = [
+    {
+      label: 'Total Amount',
+      value: amount(totalAmount),
+      note: 'Inventory value + sold',
+      icon: CircleDollarSign,
+      tone: 'blue',
+    },
+    {
+      label: 'Sold Amount',
+      value: amount(soldAmount),
+      note: `${metrics.totalSold} units sold`,
+      icon: TrendingUp,
+      tone: 'green',
+    },
+    {
+      label: 'Total Cancel Item',
+      value: amount(metrics.cancelledStock),
+      note: `${amount(metrics.cancelledProfitImpact)} reversed profit`,
+      icon: PackageX,
+      tone: 'orange',
+    },
+    {
+      label: 'Profit Made',
+      value: amount(metrics.activeProfit),
+      note: `${amount(soldAmount)} - ${amount(totalCost)} (cost)`,
+      icon: ClipboardList,
+      tone: 'purple',
+    },
+    {
+      label: 'Lost / Cancelled Impact',
+      value: amount(metrics.cancelledProfitImpact),
+      note: 'Profit removed',
+      icon: TrendingDown,
+      tone: 'red',
+    },
+    {
+      label: 'Net Profit',
+      value: amount(metrics.netProfit),
+      note: 'Profit after impact',
+      icon: Wallet,
+      tone: 'mint',
+    },
+  ]
 
   const addClient = () => {
     const name = clientDraft.name.trim()
@@ -522,40 +576,20 @@ function Dashboard({
 
   return (
     <div className="dashboard-new">
-      <section className="money-strip">
-        <article className="money-card">
-          <span>Total Amount</span>
-          <strong>{amount(totalAmount)}</strong>
-          <small>Inventory value plus sold amount</small>
-        </article>
-        <article className="money-card">
-          <span>Sold Amount</span>
-          <strong>{amount(soldAmount)}</strong>
-          <small>{metrics.totalSold} units sold</small>
-        </article>
-        <article className="money-card">
-          <span>Total Cancel Item</span>
-          <strong>{metrics.cancelledStock}</strong>
-          <small>{amount(metrics.cancelledProfitImpact)} reversed profit</small>
-        </article>
-      </section>
-
-      <section className="profit-layout">
-        <article className="profit-card gain">
-          <span>Profit Made</span>
-          <strong>{amount(metrics.activeProfit)}</strong>
-          <small>Sold amount {amount(soldAmount)} - cost {amount(totalCost)}</small>
-        </article>
-        <article className="profit-card loss">
-          <span>Lost / Cancelled Impact</span>
-          <strong>{amount(metrics.cancelledProfitImpact)}</strong>
-          <small>Profit removed from cancelled sales</small>
-        </article>
-        <article className={`profit-card ${metrics.netProfit >= 0 ? 'gain' : 'loss'}`}>
-          <span>Net Profit</span>
-          <strong>{amount(metrics.netProfit)}</strong>
-          <small>Profit after cancelled impact</small>
-        </article>
+      <section className="kpi-grid">
+        {dashboardCards.map((card) => {
+          const Icon = card.icon
+          return (
+            <article className="kpi-card" key={card.label}>
+              <div className={`kpi-icon ${card.tone}`}>
+                <Icon />
+              </div>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.note}</small>
+            </article>
+          )
+        })}
       </section>
 
       <section className="dashboard-grid">
@@ -567,14 +601,22 @@ function Dashboard({
           <div className="sales-bars">
             {monthlySales.map((item) => (
               <div className="sales-bar-row" key={item.id}>
-                <span>{item.productName}</span>
-                <div>
+                <ProductImage product={products.find((product) => product.id === item.productId) ?? { name: item.productName }} />
+                <strong>{item.productName}</strong>
+                <div className="bar-track">
                   <i style={{ width: `${Math.max(8, Math.round((item.quantity / maxMonthlyQuantity) * 100))}%` }} />
                 </div>
-                <b>{item.quantity} sold</b>
+                <b>
+                  {item.quantity} sold
+                  <small>{Math.round((item.quantity / Math.max(1, monthlySoldQuantity)) * 100)}%</small>
+                </b>
               </div>
             ))}
           </div>
+          <button className="full-report" type="button" onClick={() => undefined}>
+            View Full Report
+            <Check />
+          </button>
         </article>
 
         <article className="client-card">
@@ -599,17 +641,22 @@ function Dashboard({
               placeholder="Note"
             />
             <button className="btn primary" type="button" onClick={addClient} disabled={!clientDraft.name.trim()}>
+              <Plus />
               Add Client
             </button>
           </div>
           <div className="client-list">
-            {clients.map((client) => (
+            {clients.map((client, index) => (
               <div className="client-row" key={client.id}>
+                <div className={`client-avatar ${index % 2 ? 'green' : 'blue'}`}>
+                  {index % 2 ? <Users /> : <Building2 />}
+                </div>
                 <div>
                   <strong>{client.name}</strong>
                   <span>{client.phone} - {client.note}</span>
                 </div>
                 <button className="btn danger" type="button" onClick={() => removeClient(client.id)}>
+                  <Trash2 />
                   Remove
                 </button>
               </div>
@@ -701,8 +748,14 @@ type ProductImageSource = {
 function ProductImage({ product, variant = 'default' }: { product: ProductImageSource; variant?: 'default' | 'large' }) {
   return (
     <div className={`product-image ${variant === 'large' ? 'large' : ''}`}>
-      <ImageIcon aria-hidden="true" />
-      <span>{product.name}</span>
+      {product.imageUrl ? (
+        <img src={product.imageUrl} alt={product.name} />
+      ) : (
+        <>
+          <ImageIcon aria-hidden="true" />
+          <span>{product.name}</span>
+        </>
+      )}
     </div>
   )
 }
