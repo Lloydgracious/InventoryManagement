@@ -16,6 +16,7 @@ import {
   PackageCheck,
   PackageX,
   Plus,
+  Search,
   ShoppingCart,
   Trash2,
   TrendingDown,
@@ -169,6 +170,13 @@ type ExportReportSnapshot = {
   activeProfit: number
   cancelledProfitImpact: number
   netProfit: number
+}
+
+type Client = {
+  id: number
+  name: string
+  phone: string
+  note: string
 }
 
 const xmlEscape = (value: ExcelCell) =>
@@ -711,11 +719,13 @@ function Dashboard({
   soldItems: SoldItem[]
   onNavigate: (page: Page) => void
 }) {
-  const [clients, setClients] = useState([
+  const [clients, setClients] = useState<Client[]>([
     { id: 1, name: 'Mandalay Office', phone: '09 450 112 884', note: 'Bulk cable buyer' },
     { id: 2, name: 'Front Counter', phone: 'Walk-in', note: 'Daily retail sales' },
   ])
   const [clientDraft, setClientDraft] = useState({ name: '', phone: '', note: '' })
+  const [editingClientId, setEditingClientId] = useState<number | null>(null)
+  const [clientSearch, setClientSearch] = useState('')
 
   const currentMonth = today.slice(0, 7)
   const sales = soldItems.map((item) => ({
@@ -729,6 +739,9 @@ function Dashboard({
   const totalCost = sales.reduce((sum, item) => sum + item.quantity * item.costPrice, 0)
   const monthlySoldQuantity = monthlySales.reduce((sum, item) => sum + item.quantity, 0)
   const maxMonthlyQuantity = Math.max(1, ...monthlySales.map((item) => item.quantity))
+  const filteredClients = clients.filter((client) =>
+    client.name.toLowerCase().includes(clientSearch.trim().toLowerCase()),
+  )
   const dashboardCards = [
     {
       label: 'Total Amount',
@@ -780,25 +793,73 @@ function Dashboard({
     },
   ]
 
-  const addClient = () => {
+  const saveClient = () => {
     const name = clientDraft.name.trim()
     if (!name) return
+    const updatedClient = {
+      name,
+      phone: clientDraft.phone.trim() || 'No phone',
+      note: clientDraft.note.trim() || 'No note',
+    }
+
+    if (editingClientId) {
+      setClients((current) =>
+        current.map((client) => (client.id === editingClientId ? { ...client, ...updatedClient } : client)),
+      )
+      setEditingClientId(null)
+      setClientDraft({ name: '', phone: '', note: '' })
+      return
+    }
 
     setClients((current) => [
       {
         id: Date.now(),
-        name,
-        phone: clientDraft.phone.trim() || 'No phone',
-        note: clientDraft.note.trim() || 'No note',
+        ...updatedClient,
       },
       ...current,
     ])
     setClientDraft({ name: '', phone: '', note: '' })
   }
 
+  const editClient = (client: Client) => {
+    setEditingClientId(client.id)
+    setClientDraft({ name: client.name, phone: client.phone, note: client.note })
+  }
+
+  const cancelClientEdit = () => {
+    setEditingClientId(null)
+    setClientDraft({ name: '', phone: '', note: '' })
+  }
+
   const removeClient = (id: number) => {
     setClients((current) => current.filter((client) => client.id !== id))
+    if (editingClientId === id) {
+      cancelClientEdit()
+    }
   }
+
+  const renderClientRow = (client: Client, index: number) => (
+    <div className="client-row" key={client.id}>
+      <div className={`client-avatar ${index % 2 ? 'green' : 'blue'}`}>
+        {index % 2 ? <Users /> : <Building2 />}
+      </div>
+      <div className="client-details">
+        <strong>{client.name}</strong>
+        <span>{client.phone}</span>
+        <small>{client.note}</small>
+      </div>
+      <div className="client-actions">
+        <button className="btn" type="button" onClick={() => editClient(client)}>
+          <Edit3 />
+          Edit
+        </button>
+        <button className="btn danger" type="button" onClick={() => removeClient(client.id)}>
+          <Trash2 />
+          Remove
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="dashboard-new">
@@ -869,28 +930,32 @@ function Dashboard({
               onChange={(event) => setClientDraft((current) => ({ ...current, note: event.target.value }))}
               placeholder="Note"
             />
-            <button className="btn primary" type="button" onClick={addClient} disabled={!clientDraft.name.trim()}>
-              <Plus />
-              Add Client
+            <button className="btn primary" type="button" onClick={saveClient} disabled={!clientDraft.name.trim()}>
+              {editingClientId ? <Check /> : <Plus />}
+              {editingClientId ? 'Save Changes' : 'Add Client'}
             </button>
+            {editingClientId && (
+              <button className="btn" type="button" onClick={cancelClientEdit}>
+                <X />
+                Cancel
+              </button>
+            )}
           </div>
+          <label className="client-search">
+            <Search />
+            <input
+              value={clientSearch}
+              onChange={(event) => setClientSearch(event.target.value)}
+              placeholder="Search customer names"
+            />
+          </label>
           <div className="client-list">
-            {clients.map((client, index) => (
-              <div className="client-row" key={client.id}>
-                <div className={`client-avatar ${index % 2 ? 'green' : 'blue'}`}>
-                  {index % 2 ? <Users /> : <Building2 />}
-                </div>
-                <div className="client-details">
-                  <strong>{client.name}</strong>
-                  <span>{client.phone}</span>
-                  <small>{client.note}</small>
-                </div>
-                <button className="btn danger" type="button" onClick={() => removeClient(client.id)}>
-                  <Trash2 />
-                  Remove
-                </button>
+            {filteredClients.map((client, index) => renderClientRow(client, index))}
+            {!filteredClients.length && (
+              <div className="empty-text">
+                No customer names found.
               </div>
-            ))}
+            )}
           </div>
         </article>
       </section>
@@ -1301,6 +1366,7 @@ function MonthlyReport({
   cancelledItems: CancelledItem[]
 }) {
   const [selectedDay, setSelectedDay] = useState(today)
+  const [reportView, setReportView] = useState<'monthly' | 'daily'>('monthly')
   const dailySnapshot = useMemo<ExportReportSnapshot>(() => {
     const productsAdded = products.filter((product) => product.addedDate === selectedDay)
     const soldToday = soldItems.filter((item) => item.date === selectedDay)
@@ -1322,6 +1388,7 @@ function MonthlyReport({
       soldTransactions: soldToday.length,
       productsSold,
       cancelledQuantity,
+      remainingStock: products.reduce((sum, product) => sum + remainingQuantity(product), 0) + cancelledItems.reduce((sum, item) => sum + item.quantity, 0),
       revenue,
       cost,
       activeProfit,
@@ -1344,6 +1411,9 @@ function MonthlyReport({
     cancelledProfitImpact: report.cancelledProfitImpact,
     netProfit: report.netProfit,
   }
+  const visibleSnapshot = reportView === 'daily' ? dailySnapshot : monthlySnapshot
+  const visibleLabel = reportView === 'daily' ? selectedDay : selectedMonth
+  const visiblePeriodName = reportView === 'daily' ? 'day' : 'month'
 
   const exportDailyReport = () => {
     downloadExcelWorkbook(
@@ -1363,18 +1433,37 @@ function MonthlyReport({
     <div className="report-layout">
       <section className="module-hero report-hero">
         <div>
-          <h3>{selectedMonth} operating report.</h3>
-          <p>{report.productsSold} units sold, {report.cancelledQuantity} cancelled, and {moneyLabel(report.netProfit)} net profit.</p>
+          <h3>{visibleLabel} operating report.</h3>
+          <p>{visibleSnapshot.productsSold} units sold, {visibleSnapshot.cancelledQuantity} cancelled, and {moneyLabel(visibleSnapshot.netProfit)} net profit.</p>
         </div>
         <div className="report-controls">
-          <label className="month-picker">
-            <span>Selected month</span>
-            <input type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />
-          </label>
-          <label className="month-picker">
-            <span>Selected day</span>
-            <input type="date" value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} />
-          </label>
+          <div className="report-view-toggle" aria-label="Report view">
+            <button
+              className={reportView === 'monthly' ? 'active' : ''}
+              type="button"
+              onClick={() => setReportView('monthly')}
+            >
+              Monthly
+            </button>
+            <button
+              className={reportView === 'daily' ? 'active' : ''}
+              type="button"
+              onClick={() => setReportView('daily')}
+            >
+              Daily
+            </button>
+          </div>
+          {reportView === 'monthly' ? (
+            <label className="month-picker">
+              <span>Selected month</span>
+              <input type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />
+            </label>
+          ) : (
+            <label className="month-picker">
+              <span>Selected day</span>
+              <input type="date" value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} />
+            </label>
+          )}
           <div className="export-actions">
             <button className="btn" type="button" onClick={exportDailyReport}>
               <Download />
@@ -1391,50 +1480,50 @@ function MonthlyReport({
       <div className="metric-grid compact">
         <article className="card metric-card">
           <div className="metric-label"><span>Products Added</span><Boxes /></div>
-          <strong>{report.productsAdded.length}</strong>
+          <strong>{visibleSnapshot.productsAdded.length}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Products Sold</span><ShoppingCart /></div>
-          <strong>{report.productsSold}</strong>
+          <strong>{visibleSnapshot.productsSold}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Remaining Stock</span><PackageCheck /></div>
-          <strong>{report.remainingStock}</strong>
+          <strong>{visibleSnapshot.remainingStock ?? report.remainingStock}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Cancelled Quantity</span><Ban /></div>
-          <strong>{report.cancelledQuantity}</strong>
+          <strong>{visibleSnapshot.cancelledQuantity}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Revenue</span><TrendingUp /></div>
-          <strong>{moneyLabel(report.revenue)}</strong>
+          <strong>{moneyLabel(visibleSnapshot.revenue)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Cost</span><ClipboardList /></div>
-          <strong>{moneyLabel(report.cost)}</strong>
+          <strong>{moneyLabel(visibleSnapshot.cost)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Gross Profit</span><TrendingUp /></div>
-          <strong>{moneyLabel(report.activeProfit)}</strong>
+          <strong>{moneyLabel(visibleSnapshot.activeProfit)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Cancelled Impact</span><TrendingDown /></div>
-          <strong>{moneyLabel(report.cancelledProfitImpact)}</strong>
+          <strong>{moneyLabel(visibleSnapshot.cancelledProfitImpact)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Net Profit</span><Check /></div>
-          <strong>{moneyLabel(report.netProfit)}</strong>
+          <strong>{moneyLabel(visibleSnapshot.netProfit)}</strong>
         </article>
       </div>
 
       <div className="card report-card">
         <div className="section-head">
           <h3>Products Added</h3>
-          <span>{selectedMonth}</span>
+          <span>{visibleLabel}</span>
         </div>
         <SimpleList
-          empty="No products were added in this month."
-          rows={report.productsAdded.map((product) => ({
+          empty={`No products were added in this ${visiblePeriodName}.`}
+          rows={visibleSnapshot.productsAdded.map((product) => ({
             title: product.name,
             detail: `${product.totalQuantity} total quantity - added ${product.addedDate}`,
           }))}
@@ -1444,11 +1533,11 @@ function MonthlyReport({
       <div className="card report-card">
         <div className="section-head">
           <h3>Products Sold</h3>
-          <span>{selectedMonth}</span>
+          <span>{visibleLabel}</span>
         </div>
         <SimpleList
-          empty="No products were sold in this month."
-          rows={report.soldThisMonth.map((item) => ({
+          empty={`No products were sold in this ${visiblePeriodName}.`}
+          rows={visibleSnapshot.soldItems.map((item) => ({
             title: item.productName,
             detail: `${item.quantity} sold - sell ${moneyLabel(item.salePrice)} - cost ${moneyLabel(item.costPrice)} - profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))}`,
           }))}
@@ -1458,11 +1547,11 @@ function MonthlyReport({
       <div className="card report-card">
         <div className="section-head">
           <h3>Cancelled Profit Impact</h3>
-          <span>{selectedMonth}</span>
+          <span>{visibleLabel}</span>
         </div>
         <SimpleList
-          empty="No cancelled sales in this month."
-          rows={report.cancelledThisMonth.map((item) => ({
+          empty={`No cancelled sales in this ${visiblePeriodName}.`}
+          rows={visibleSnapshot.cancelledItems.map((item) => ({
             title: item.productName,
             detail: `${item.quantity} cancelled - reversed profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))} - ${item.notes || 'No notes'}`,
           }))}

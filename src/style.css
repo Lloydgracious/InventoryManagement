@@ -514,7 +514,7 @@ textarea:focus-visible {
 .client-card {
   height: 360px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -754,6 +754,44 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.client-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.client-search {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.client-search svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary-dark);
+}
+
+.client-search input {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.client-search input:focus {
+  box-shadow: none;
+}
+
 .client-row span,
 .activity-item span,
 .activity-item time,
@@ -783,6 +821,16 @@ textarea:focus-visible {
 .command-card p {
   margin: 8px 0 0;
   color: #7b879d;
+}
+
+.report-hero h3 {
+  font-size: 30px;
+  line-height: 1.12;
+}
+
+.report-hero p {
+  font-size: 16px;
+  line-height: 1.45;
 }
 
 .inventory-hero-side {
@@ -1515,6 +1563,31 @@ input:disabled {
   gap: 10px;
 }
 
+.report-view-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.report-view-toggle button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.report-view-toggle button.active {
+  background: #ffffff;
+  color: var(--primary-dark);
+  box-shadow: 0 10px 20px rgba(113, 135, 168, 0.12);
+}
+
 .report-hero .month-picker {
   padding: 10px;
 }
@@ -1762,6 +1835,16 @@ input:disabled {
     margin-top: 4px;
     font-size: 11px;
     line-height: 1.35;
+  }
+
+  .compact-page-shell .report-hero h3 {
+    font-size: 22px;
+    line-height: 1.16;
+  }
+
+  .compact-page-shell .report-hero p {
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   .compact-page-shell .inventory-hero-side {
@@ -2310,7 +2393,7 @@ input:disabled {
     opacity: 1;
     transform: none;
     color: inherit;
-    font-size: 10px;
+    font-size: 8px;
     line-height: 1.1;
     text-align: center;
     white-space: normal;
@@ -2328,12 +2411,12 @@ input:disabled {
   }
 
   .page-intro h1 {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .page-intro p {
     max-width: 360px;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1.55;
   }
 
@@ -2345,7 +2428,7 @@ input:disabled {
   }
 
   .date-card strong {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .dashboard-new,
@@ -2403,11 +2486,11 @@ input:disabled {
 
   .kpi-card span,
   .kpi-card small {
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .kpi-card strong {
-    font-size: 23px;
+    font-size: 21px;
   }
 
   .dashboard-grid,
@@ -2425,18 +2508,27 @@ input:disabled {
     border-radius: 18px;
   }
 
+  .client-card {
+    height: min(620px, calc(100vh - 40px));
+    min-height: 560px;
+  }
+
+  .client-list {
+    min-height: 170px;
+  }
+
   .section-head {
     align-items: center;
     margin-bottom: 12px;
   }
 
   .section-head h3 {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .section-head span {
     padding: 6px 9px;
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .sales-bar-row {
@@ -2454,7 +2546,7 @@ input:disabled {
 
   .sales-bar-row > strong {
     align-self: end;
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .sales-bar-row .bar-track {
@@ -2463,12 +2555,12 @@ input:disabled {
 
   .sales-bar-row b {
     align-self: end;
-    font-size: 12px;
+    font-size: 10px;
     text-align: right;
   }
 
   .sales-bar-row b small {
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .client-form {
@@ -2482,12 +2574,35 @@ input:disabled {
 
   .client-row {
     grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+      "avatar details"
+      "actions actions";
     gap: 10px;
+    align-items: start;
     justify-items: start;
+    min-height: 0;
+  }
+
+  .client-avatar {
+    grid-area: avatar;
+  }
+
+  .client-details {
+    grid-area: details;
+    align-self: center;
+  }
+
+  .client-actions {
+    grid-area: actions;
+    grid-column: 1 / -1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .client-row .btn {
-    grid-column: 1 / -1;
+    min-height: 36px;
+    padding: 7px 10px;
     width: 100%;
   }
 
@@ -2559,25 +2674,25 @@ input:disabled {
 
   .inventory-title-row h4 {
     margin-top: 4px;
-    font-size: 15px;
+    font-size: 13px;
     line-height: 1.22;
   }
 
   .price-pill {
     min-height: 36px;
     padding: 0 11px;
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .stock-chip {
     min-height: 18px;
     padding: 0 7px;
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .profit-line,
   .cancelled-note {
-    font-size: 12px;
+    font-size: 10px;
   }
 
   .inventory-stats {
@@ -2590,11 +2705,11 @@ input:disabled {
     padding: 7px 5px;
     border-radius: 12px;
     text-align: center;
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .inventory-stats strong {
-    font-size: 19px;
+    font-size: 17px;
   }
 
   .inventory-card-actions {
@@ -2616,7 +2731,7 @@ input:disabled {
 
   .cancelled-card .inventory-card-actions .btn {
     min-height: 40px;
-    font-size: 12px;
+    font-size: 10px;
   }
 
   .cancelled-card .cancelled-stats {
@@ -2628,12 +2743,12 @@ input:disabled {
   }
 
   .cancelled-card .cancelled-stats strong {
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.1;
   }
 
   .cancelled-card .cancelled-stats span:last-child strong {
-    font-size: 12px;
+    font-size: 10px;
     line-height: 1;
   }
 
@@ -2677,11 +2792,11 @@ input:disabled {
   }
 
   .metric-label span {
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .metric-card strong {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .table-wrap {
@@ -2722,7 +2837,7 @@ input:disabled {
     min-width: 0;
     overflow: hidden;
     color: var(--ink);
-    font-size: 14px;
+    font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2731,7 +2846,7 @@ input:disabled {
     display: flex;
     gap: 18px;
     color: var(--ink);
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 800;
   }
 
@@ -2744,7 +2859,7 @@ input:disabled {
   .sold-mobile-stats small,
   .sold-mobile-profit small {
     color: #7b879d;
-    font-size: 10px;
+    font-size: 8px;
     font-weight: 800;
   }
 
@@ -2754,14 +2869,14 @@ input:disabled {
 
   .sold-mobile-profit strong {
     color: var(--ink);
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .sold-mobile-profit .btn {
     min-height: 30px;
     margin-top: 4px;
     padding: 5px 8px;
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .sold-mobile-profit .btn svg {
@@ -2776,7 +2891,7 @@ input:disabled {
     padding-top: 10px;
     border-top: 1px solid var(--line);
     color: #52627c;
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .sold-mobile-meta span {
@@ -2833,7 +2948,7 @@ input:disabled {
   }
 
   .page-intro h1 {
-    font-size: 34px;
+    font-size: 32px;
   }
 
   .kpi-grid {
@@ -2938,11 +3053,11 @@ input:disabled {
   }
 
   .page-intro h1 {
-    font-size: 25px;
+    font-size: 23px;
   }
 
   .page-intro p {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .date-card {
@@ -2973,7 +3088,7 @@ input:disabled {
   }
 
   .metric-card strong {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .sold-mobile-card {
@@ -2992,18 +3107,18 @@ input:disabled {
   }
 
   .sold-mobile-profit strong {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .module-stats span,
   .revenue-kpis span {
     min-height: 58px;
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .module-stats strong,
   .revenue-kpis strong {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .inventory-card-click {
@@ -3020,18 +3135,18 @@ input:disabled {
   }
 
   .inventory-title-row h4 {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .price-pill {
     min-height: 34px;
     padding: 0 10px;
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .profit-line,
   .cancelled-note {
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .inventory-stats {
@@ -3041,15 +3156,15 @@ input:disabled {
   .inventory-stats span {
     min-height: 48px;
     padding: 6px 4px;
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .inventory-stats strong {
-    font-size: 17px;
+    font-size: 15px;
   }
 
   .cancelled-card .cancelled-stats span:last-child strong {
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .inventory-card-actions {
@@ -3087,7 +3202,7 @@ input:disabled {
 
 @media (max-width: 380px) {
   .nav-button span {
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .kpi-grid,
@@ -3118,10 +3233,48 @@ input:disabled {
   }
 
   .cancelled-card .cancelled-stats span:last-child strong {
-    font-size: 9px;
+    font-size: 7px;
   }
 
   .inventory-card-actions {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .client-list {
+    align-content: start;
+  }
+
+  .client-list .client-row {
+    min-height: 132px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+      "avatar details"
+      "actions actions";
+    align-items: start;
+    row-gap: 12px;
+  }
+
+  .client-list .client-avatar {
+    grid-area: avatar;
+  }
+
+  .client-list .client-details {
+    grid-area: details;
+    align-self: center;
+  }
+
+  .client-list .client-actions {
+    grid-area: actions;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .client-list .client-actions .btn {
+    min-height: 38px;
+    width: 100%;
   }
 }
