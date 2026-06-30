@@ -25,7 +25,7 @@ import {
   X,
 } from 'lucide-react'
 
-type Page = 'Dashboard' | 'Inventory' | 'Sold Items' | 'Cancelled Items' | 'Monthly Report'
+type Page = 'Dashboard' | 'Inventory' | 'Re-stock Items' | 'Sold Items' | 'Cancelled Items' | 'Monthly Report'
 
 type Product = {
   id: number
@@ -37,6 +37,8 @@ type Product = {
   priceUnit?: string
   addedDate: string
   imageUrl?: string
+  isRestock?: boolean
+  restockSourceProductId?: number
 }
 
 type SoldItem = {
@@ -49,6 +51,10 @@ type SoldItem = {
   priceUnit?: string
   date: string
   notes: string
+}
+
+type SoldItemView = SoldItem & {
+  imageUrl?: string
 }
 
 type CancelledItem = {
@@ -274,9 +280,11 @@ function App() {
     if (saleQuantity < 1) return
 
     setProducts((current) =>
-      current.map((item) =>
-        item.id === product.id ? { ...item, soldQuantity: item.soldQuantity + saleQuantity } : item,
-      ),
+      current
+        .map((item) =>
+          item.id === product.id ? { ...item, soldQuantity: item.soldQuantity + saleQuantity } : item,
+        )
+        .filter((item) => !(item.id === product.id && item.isRestock && remainingQuantity(item) === 0)),
     )
     setSoldItems((current) => [
       {
@@ -293,6 +301,10 @@ function App() {
       ...current,
     ])
     setSellingProduct(null)
+  }
+
+  const deleteProduct = (product: Product) => {
+    setProducts((current) => current.filter((item) => item.id !== product.id))
   }
 
   const cancelSale = (sale: SoldItem, quantity: number, notes: string) => {
@@ -346,27 +358,9 @@ function App() {
     if (addQuantity < 1) return
 
     setProducts((current) => {
-      const existingProduct = current.find((product) => product.id === cancelledItem.productId)
-
-      if (existingProduct) {
-        return current.map((product) =>
-          product.id === cancelledItem.productId
-            ? {
-                ...product,
-                name: cancelledItem.productName,
-                soldQuantity: Math.max(0, product.soldQuantity - addQuantity),
-                price: Math.max(0, price),
-                costPrice: cancelledItem.costPrice,
-                priceUnit: cancelledItem.priceUnit,
-                imageUrl: cancelledItem.imageUrl,
-              }
-            : product,
-        )
-      }
-
       return [
         {
-          id: cancelledItem.productId,
+          id: Math.max(0, ...current.map((product) => product.id)) + 1,
           name: cancelledItem.productName,
           totalQuantity: addQuantity,
           soldQuantity: 0,
@@ -375,6 +369,8 @@ function App() {
           priceUnit: cancelledItem.priceUnit,
           addedDate: today,
           imageUrl: cancelledItem.imageUrl,
+          isRestock: true,
+          restockSourceProductId: cancelledItem.productId,
         },
         ...current,
       ]
@@ -382,7 +378,7 @@ function App() {
     setCancelledItems((current) =>
       current
         .map((item) =>
-          item.id === cancelledItem.id ? { ...item, quantity: item.quantity - addQuantity, salePrice: Math.max(0, price) } : item,
+          item.id === cancelledItem.id ? { ...item, quantity: item.quantity - addQuantity } : item,
         )
         .filter((item) => item.quantity > 0),
     )
@@ -448,7 +444,7 @@ function App() {
                 )}
                 {page === 'Inventory' && (
                   <InventoryTable
-                    products={products}
+                    products={products.filter((product) => !product.isRestock)}
                     onAdd={() =>
                       setAddingProduct({
                         id: Date.now(),
@@ -460,12 +456,29 @@ function App() {
                         addedDate: today,
                       })
                     }
+                    onViewRestocks={() => switchPage('Re-stock Items')}
+                    onDelete={deleteProduct}
+                    onEdit={setEditingProduct}
+                    onSell={setSellingProduct}
+                  />
+                )}
+                {page === 'Re-stock Items' && (
+                  <RestockItemsTable
+                    products={products.filter((product) => product.isRestock)}
+                    onBack={() => switchPage('Inventory')}
+                    onDelete={deleteProduct}
                     onEdit={setEditingProduct}
                     onSell={setSellingProduct}
                   />
                 )}
                 {page === 'Sold Items' && (
-                  <SoldItemsTable soldItems={soldItems} onCancel={setCancellingSale} />
+                  <SoldItemsTable
+                    soldItems={soldItems.map((item) => ({
+                      ...item,
+                      imageUrl: products.find((product) => product.id === item.productId)?.imageUrl,
+                    }))}
+                    onCancel={setCancellingSale}
+                  />
                 )}
                 {page === 'Cancelled Items' && (
                   <CancelledItemsTable
@@ -717,11 +730,15 @@ function Dashboard({
 function InventoryTable({
   products,
   onAdd,
+  onViewRestocks,
+  onDelete,
   onEdit,
   onSell,
 }: {
   products: Product[]
   onAdd: () => void
+  onViewRestocks: () => void
+  onDelete: (product: Product) => void
   onEdit: (product: Product) => void
   onSell: (product: Product) => void
 }) {
@@ -742,10 +759,16 @@ function InventoryTable({
             <span><strong>{lowStock}</strong>Low stock</span>
             <span><strong>{amount(totalValue)}</strong>Value</span>
           </div>
-          <button className="btn primary add-product-btn" type="button" onClick={onAdd}>
-            <PackagePlus />
-            Add Product
-          </button>
+          <div className="inventory-hero-actions">
+            <button className="btn primary add-product-btn" type="button" onClick={onAdd}>
+              <PackagePlus />
+              Add Product
+            </button>
+            <button className="btn restock-page-btn" type="button" onClick={onViewRestocks}>
+              <PackageCheck />
+              Re-stock Items
+            </button>
+          </div>
         </div>
       </section>
 
@@ -753,7 +776,8 @@ function InventoryTable({
         {products.map((product) => {
           const remaining = remainingQuantity(product)
           const stockRatio = product.totalQuantity ? remaining / product.totalQuantity : 0
-          const status = stockRatio < 0.3 ? 'Low' : stockRatio < 0.6 ? 'Watch' : 'Healthy'
+          const status = product.isRestock ? 'Re-stock' : stockRatio < 0.3 ? 'Low' : stockRatio < 0.6 ? 'Watch' : 'Healthy'
+          const statusClass = product.isRestock ? 'restock' : status.toLowerCase()
 
           return (
             <article className="inventory-card" key={product.id}>
@@ -762,12 +786,13 @@ function InventoryTable({
                 <div className="inventory-card-body">
                   <div className="inventory-title-row">
                     <div>
-                      <span className={`stock-chip ${status.toLowerCase()}`}>{status}</span>
+                      <span className={`stock-chip ${statusClass}`}>{status}</span>
                       <h4>{product.name}</h4>
                     </div>
                     <strong>{priceLabel(product)}</strong>
                   </div>
                   <p className="profit-line">
+                    {product.isRestock ? 'Re-stock batch - ' : ''}
                     Cost {moneyLabel(product.costPrice, product.priceUnit)} - Profit per unit {moneyLabel(product.price - product.costPrice, product.priceUnit)}
                   </p>
                   <div className="inventory-stats">
@@ -781,6 +806,9 @@ function InventoryTable({
                 <button className="icon-btn" title="Edit product" onClick={() => onEdit(product)}>
                   <Edit3 />
                 </button>
+                <button className="icon-btn danger-icon" title="Delete product" onClick={() => onDelete(product)}>
+                  <Trash2 />
+                </button>
                 <button className="btn primary" onClick={() => onSell(product)} disabled={remaining === 0}>
                   <ShoppingCart />
                   Sell
@@ -790,6 +818,96 @@ function InventoryTable({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+function RestockItemsTable({
+  products,
+  onBack,
+  onDelete,
+  onEdit,
+  onSell,
+}: {
+  products: Product[]
+  onBack: () => void
+  onDelete: (product: Product) => void
+  onEdit: (product: Product) => void
+  onSell: (product: Product) => void
+}) {
+  const totalRemaining = products.reduce((sum, product) => sum + remainingQuantity(product), 0)
+  const totalValue = products.reduce((sum, product) => sum + remainingQuantity(product) * product.price, 0)
+
+  return (
+    <div className="inventory-workspace restock-workspace">
+      <section className="module-hero restock-hero">
+        <div>
+          <h3>{products.length} re-stock batches ready to sell.</h3>
+          <p>Cancelled items added back are kept here with their own selling price.</p>
+        </div>
+        <div className="inventory-hero-side">
+          <div className="module-stats">
+            <span><strong>{totalRemaining}</strong>Available</span>
+            <span><strong>{amount(totalValue)}</strong>Value</span>
+            <span><strong>{products.length}</strong>Batches</span>
+          </div>
+          <button className="btn" type="button" onClick={onBack}>
+            <Boxes />
+            Back to Products
+          </button>
+        </div>
+      </section>
+
+      {products.length === 0 ? (
+        <div className="empty-state">
+          <PackagePlus />
+          <strong>No re-stock items yet.</strong>
+          <span>Add cancelled items back into inventory to create separate re-stock batches.</span>
+        </div>
+      ) : (
+        <div className="inventory-grid">
+          {products.map((product) => {
+            const remaining = remainingQuantity(product)
+
+            return (
+              <article className="inventory-card restock-card" key={product.id}>
+                <button className="inventory-card-click" type="button" onClick={() => onEdit(product)}>
+                  <ProductImage product={product} variant="large" />
+                  <div className="inventory-card-body">
+                    <div className="inventory-title-row">
+                      <div>
+                        <span className="stock-chip restock">Re-stock</span>
+                        <h4>{product.name}</h4>
+                      </div>
+                      <strong>{priceLabel(product)}</strong>
+                    </div>
+                    <p className="profit-line">
+                      Separate batch - Cost {moneyLabel(product.costPrice, product.priceUnit)} - Profit per unit {moneyLabel(product.price - product.costPrice, product.priceUnit)}
+                    </p>
+                    <div className="inventory-stats">
+                      <span><strong>{remaining}</strong>Remaining</span>
+                      <span><strong>{product.soldQuantity}</strong>Sold</span>
+                      <span><strong>{product.totalQuantity}</strong>Total</span>
+                    </div>
+                  </div>
+                </button>
+                <div className="row-actions inventory-card-actions">
+                  <button className="icon-btn" title="Edit re-stock item" onClick={() => onEdit(product)}>
+                    <Edit3 />
+                  </button>
+                  <button className="icon-btn danger-icon" title="Delete re-stock item" onClick={() => onDelete(product)}>
+                    <Trash2 />
+                  </button>
+                  <button className="btn primary" onClick={() => onSell(product)} disabled={remaining === 0}>
+                    <ShoppingCart />
+                    Sell
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -814,7 +932,7 @@ function ProductImage({ product, variant = 'default' }: { product: ProductImageS
   )
 }
 
-function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItem[]; onCancel: (item: SoldItem) => void }) {
+function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItemView[]; onCancel: (item: SoldItem) => void }) {
   const totalProfit = soldItems.reduce(
     (sum, item) => sum + profitAmount(item.quantity, item.salePrice, item.costPrice),
     0,
@@ -871,6 +989,33 @@ function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItem[]; onCanc
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="sold-mobile-list">
+        {soldItems.map((item) => (
+          <article className="sold-mobile-card" key={item.id}>
+            <ProductImage product={{ name: item.productName, imageUrl: item.imageUrl }} />
+            <div className="sold-mobile-main">
+              <strong>{item.productName}</strong>
+              <div className="sold-mobile-stats">
+                <span><small>Qty Sold</small>{item.quantity}</span>
+                <span><small>Sell Price</small>{moneyLabel(item.salePrice, item.priceUnit)}</span>
+              </div>
+            </div>
+            <div className="sold-mobile-profit">
+              <small>Profit</small>
+              <strong>{moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)}</strong>
+              <button className="btn danger" onClick={() => onCancel(item)}>
+                <Ban />
+                Cancel
+              </button>
+            </div>
+            <div className="sold-mobile-meta">
+              <span><CalendarDays />{item.date}</span>
+              <span><ClipboardList />{item.notes || '-'}</span>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   )
@@ -1286,7 +1431,7 @@ function AddCancelledToInventoryModal({
     <div className="modal-backdrop">
       <div className="modal">
         <div className="modal-head">
-          <h3>Add to Inventory</h3>
+          <h3>Create Re-stock Batch</h3>
           <button className="icon-btn" title="Close" onClick={onClose}><X /></button>
         </div>
         <div className="form-grid">
@@ -1294,7 +1439,8 @@ function AddCancelledToInventoryModal({
             <ProductImage product={{ name: item.productName, imageUrl: item.imageUrl }} />
             <div className="add-inventory-summary">
               <strong>{item.productName}</strong>
-            <span>{item.quantity} cancelled units available</span>
+              <span>{item.quantity} cancelled units available</span>
+              <span>This creates a separate re-stock item with its own selling price.</span>
               <span>Cost {moneyLabel(item.costPrice, item.priceUnit)}</span>
             </div>
           </div>
@@ -1325,7 +1471,7 @@ function AddCancelledToInventoryModal({
             onClick={() => onSave(item, quantity, price)}
             disabled={quantity < 1 || quantity > item.quantity}
           >
-            Add to Inventory
+            Create Re-stock
           </button>
         </div>
       </div>
