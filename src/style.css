@@ -421,6 +421,17 @@ textarea:focus-visible {
   align-content: start;
   gap: 9px;
   padding: 18px 18px;
+  color: inherit;
+  text-align: left;
+}
+
+.dashboard-action-card {
+  width: 100%;
+  cursor: pointer;
+}
+
+.dashboard-action-panel {
+  cursor: pointer;
 }
 
 .kpi-icon {
@@ -489,6 +500,7 @@ textarea:focus-visible {
 .command-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
+  align-items: start;
   gap: 20px;
 }
 
@@ -497,6 +509,13 @@ textarea:focus-visible {
 .card,
 .module-hero {
   padding: 18px;
+}
+
+.client-card {
+  height: 360px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .section-head {
@@ -519,6 +538,29 @@ textarea:focus-visible {
 .list {
   display: grid;
   gap: 10px;
+}
+
+.client-list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(131, 174, 234, 0.5) rgba(238, 245, 253, 0.8);
+}
+
+.client-list::-webkit-scrollbar {
+  width: 7px;
+}
+
+.client-list::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(238, 245, 253, 0.8);
+}
+
+.client-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(131, 174, 234, 0.5);
 }
 
 .sales-bar-row {
@@ -813,6 +855,7 @@ textarea:focus-visible {
 .inventory-card {
   min-width: 0;
   overflow: hidden;
+  border-radius: 22px;
 }
 
 .inventory-card:hover,
@@ -844,7 +887,7 @@ textarea:focus-visible {
 
 .product-image.large {
   width: 100%;
-  height: 132px;
+  height: 148px;
   border-width: 0 0 1px;
   border-radius: 0;
 }
@@ -873,8 +916,8 @@ textarea:focus-visible {
 
 .inventory-card-body {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 14px;
+  padding: 15px;
 }
 
 .inventory-title-row {
@@ -885,17 +928,44 @@ textarea:focus-visible {
   align-items: start;
 }
 
+.inventory-title-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-title-actions .icon-btn {
+  width: 36px;
+  min-height: 36px;
+}
+
 .inventory-title-row h4 {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   min-width: 0;
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
+  line-height: 1.18;
 }
 
 .inventory-title-row > strong {
   color: var(--primary-dark);
   font-size: 14px;
   white-space: nowrap;
+}
+
+.price-pill {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #dce8fb;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #edf5ff, #f4f0ff);
+  color: #416eb8;
+  font-size: 17px;
+  font-weight: 900;
 }
 
 .stock-chip {
@@ -947,6 +1017,31 @@ textarea:focus-visible {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.cancelled-card .inventory-card-body {
+  gap: 12px;
+}
+
+.cancelled-card .cancelled-stats span {
+  min-height: 54px;
+}
+
+.cancelled-card .cancelled-stats strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.cancelled-card .cancelled-stats span:last-child strong {
+  font-size: 13px;
+  line-height: 1;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.cancelled-card .cancelled-note {
+  min-height: 18px;
+}
+
 .inventory-card-actions,
 .row-actions {
   display: flex;
@@ -956,7 +1051,15 @@ textarea:focus-visible {
 }
 
 .inventory-card-actions {
-  padding: 0 14px 14px;
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(0, 0.82fr);
+  gap: 10px;
+  padding: 0 15px 15px;
+}
+
+.inventory-card-actions .btn {
+  min-height: 38px;
+  padding-inline: 12px;
 }
 
 .inventory-card-actions .btn {
@@ -1407,6 +1510,25 @@ input:disabled {
   background: #f8fbff;
 }
 
+.report-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.report-hero .month-picker {
+  padding: 10px;
+}
+
+.export-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.export-actions .btn {
+  width: 100%;
+}
+
 .image-editor {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -1458,15 +1580,6 @@ input:disabled {
 .add-inventory-summary {
   display: grid;
   gap: 4px;
-}
-
-.app-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: #64748b;
-  font-size: 14px;
 }
 
 @keyframes page-in {
@@ -1568,6 +1681,496 @@ input:disabled {
   72% {
     transform: translateY(1px) rotate(3deg);
   }
+}
+
+@media (min-width: 981px) {
+  .app.compact-view .main {
+    gap: 12px;
+    padding: 16px 24px 18px;
+  }
+
+  .app.compact-view .page-intro {
+    grid-template-columns: minmax(0, 1fr) 172px;
+    gap: 18px;
+  }
+
+  .app.compact-view .page-intro h1 {
+    margin-bottom: 5px;
+    font-size: 24px;
+  }
+
+  .app.compact-view .page-intro p {
+    font-size: 12px;
+  }
+
+  .app.compact-view .date-card {
+    min-height: 50px;
+    grid-template-columns: 24px auto minmax(0, 1fr);
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: 13px;
+  }
+
+  .app.compact-view .date-card > svg {
+    width: 24px;
+    height: 24px;
+    padding: 5px;
+    border-radius: 8px;
+  }
+
+  .app.compact-view .date-card strong {
+    font-size: 23px;
+  }
+
+  .app.compact-view .date-card span {
+    gap: 1px;
+    font-size: 11px;
+  }
+
+  .compact-page-shell .inventory-workspace,
+  .compact-page-shell .ledger-workspace,
+  .compact-page-shell .returns-workspace,
+  .compact-page-shell .report-layout {
+    gap: 13px;
+  }
+
+  .compact-page-shell .module-hero,
+  .compact-page-shell .card,
+  .compact-page-shell .metric-card,
+  .compact-page-shell .table-wrap,
+  .compact-page-shell .inventory-card,
+  .compact-page-shell .empty-state {
+    border-radius: 14px;
+    box-shadow: 0 12px 24px rgba(113, 135, 168, 0.07);
+  }
+
+  .compact-page-shell .module-hero,
+  .compact-page-shell .card {
+    padding: 11px 12px;
+  }
+
+  .compact-page-shell .module-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.64fr);
+    gap: 12px;
+  }
+
+  .compact-page-shell .module-hero h3 {
+    font-size: 16px;
+  }
+
+  .compact-page-shell .module-hero p {
+    margin-top: 4px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .compact-page-shell .inventory-hero-side {
+    gap: 8px;
+  }
+
+  .compact-page-shell .inventory-hero-actions {
+    gap: 7px;
+  }
+
+  .compact-page-shell .module-stats,
+  .compact-page-shell .metric-grid,
+  .compact-page-shell .metric-grid.compact,
+  .compact-page-shell .revenue-kpis {
+    gap: 9px;
+  }
+
+  .compact-page-shell .module-stats span,
+  .compact-page-shell .revenue-kpis span,
+  .compact-page-shell .inventory-stats span {
+    min-height: 38px;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 10px;
+    font-size: 9px;
+  }
+
+  .compact-page-shell .module-stats strong,
+  .compact-page-shell .revenue-kpis strong,
+  .compact-page-shell .inventory-stats strong {
+    font-size: 16px;
+  }
+
+  .compact-page-shell .inventory-grid {
+    grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+    gap: 12px;
+  }
+
+  .compact-page-shell .inventory-card {
+    border-radius: 16px;
+  }
+
+  .compact-page-shell .product-image.large {
+    height: 92px;
+  }
+
+  .compact-page-shell .inventory-card-body {
+    gap: 8px;
+    padding: 9px;
+  }
+
+  .compact-page-shell .inventory-title-row {
+    gap: 6px;
+  }
+
+  .compact-page-shell .inventory-title-row h4 {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.18;
+  }
+
+  .compact-page-shell .inventory-title-actions {
+    gap: 5px;
+  }
+
+  .compact-page-shell .inventory-title-actions .icon-btn {
+    width: 28px;
+    min-height: 28px;
+    border-radius: 8px;
+  }
+
+  .compact-page-shell .stock-chip {
+    min-height: 17px;
+    padding: 0 7px;
+    font-size: 8px;
+  }
+
+  .compact-page-shell .inventory-stats {
+    gap: 6px;
+  }
+
+  .compact-page-shell .inventory-stats span {
+    min-height: 38px;
+    padding: 5px 4px;
+    font-size: 9px;
+  }
+
+  .compact-page-shell .inventory-stats strong {
+    font-size: 15px;
+  }
+
+  .compact-page-shell .inventory-card-actions {
+    grid-template-columns: minmax(82px, auto) minmax(0, 0.68fr);
+    gap: 7px;
+    padding: 0 9px 9px;
+  }
+
+  .compact-page-shell .price-pill {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .compact-page-shell .btn,
+  .compact-page-shell .upload-button,
+  .compact-page-shell .icon-btn {
+    min-height: 32px;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .compact-page-shell .icon-btn {
+    width: 32px;
+    padding: 0;
+  }
+
+  .compact-page-shell .btn svg,
+  .compact-page-shell .upload-button svg,
+  .compact-page-shell .icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .compact-page-shell .cancelled-card .inventory-card-body {
+    gap: 7px;
+  }
+
+  .compact-page-shell .cancelled-card .cancelled-stats span {
+    min-height: 40px;
+  }
+
+  .compact-page-shell .cancelled-card .cancelled-stats strong {
+    font-size: 13px;
+  }
+
+  .compact-page-shell .cancelled-card .cancelled-stats span:last-child strong {
+    font-size: 11px;
+  }
+
+  .compact-page-shell .cancelled-card .cancelled-note {
+    min-height: 14px;
+    font-size: 10px;
+  }
+
+  .compact-page-shell .cancelled-card .inventory-card-actions {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .compact-page-shell .metric-grid,
+  .compact-page-shell .metric-grid.compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .compact-page-shell .metric-card {
+    min-height: 66px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    column-gap: 9px;
+    row-gap: 3px;
+    padding: 10px;
+  }
+
+  .compact-page-shell .metric-card::before {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .compact-page-shell .metric-label svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .compact-page-shell .metric-label span {
+    font-size: 10px;
+  }
+
+  .compact-page-shell .metric-card strong {
+    font-size: 16px;
+  }
+
+  .compact-page-shell .section-head {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .compact-page-shell .section-head h3 {
+    font-size: 14px;
+  }
+
+  .compact-page-shell .section-head span {
+    padding: 4px 8px;
+    border-radius: 9px;
+    font-size: 10px;
+  }
+
+  .compact-page-shell .list,
+  .compact-page-shell .sales-bars,
+  .compact-page-shell .client-list,
+  .compact-page-shell .activity-feed {
+    gap: 7px;
+  }
+
+  .compact-page-shell .list-row {
+    gap: 2px;
+    padding: 8px 9px;
+    border-radius: 10px;
+  }
+
+  .compact-page-shell .list-row strong {
+    font-size: 12px;
+  }
+
+  .compact-page-shell .list-row span,
+  .compact-page-shell .empty-text {
+    font-size: 10px;
+  }
+
+  .compact-page-shell .sold-mobile-list {
+    grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
+    gap: 10px;
+  }
+
+  .compact-page-shell .sold-mobile-card {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 10px;
+    border-radius: 14px;
+    box-shadow: 0 12px 22px rgba(113, 135, 168, 0.07);
+  }
+
+  .compact-page-shell .sold-mobile-card .product-image {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+  }
+
+  .compact-page-shell .sold-mobile-main {
+    gap: 7px;
+  }
+
+  .compact-page-shell .sold-mobile-main > strong {
+    font-size: 12px;
+  }
+
+  .compact-page-shell .sold-mobile-stats {
+    gap: 12px;
+    font-size: 10px;
+  }
+
+  .compact-page-shell .sold-mobile-stats small,
+  .compact-page-shell .sold-mobile-profit small {
+    font-size: 8px;
+  }
+
+  .compact-page-shell .sold-mobile-profit strong {
+    font-size: 14px;
+  }
+
+  .compact-page-shell .sold-mobile-profit .btn {
+    min-height: 24px;
+    margin-top: 3px;
+    padding: 4px 7px;
+    font-size: 9px;
+  }
+
+  .compact-page-shell .sold-mobile-profit .btn svg,
+  .compact-page-shell .sold-mobile-meta svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .compact-page-shell .sold-mobile-meta {
+    gap: 10px;
+    padding-top: 7px;
+    font-size: 9px;
+  }
+
+  .compact-page-shell .empty-state {
+    min-height: 140px;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .compact-page-shell .empty-state svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .compact-page-shell .empty-state strong {
+    font-size: 15px;
+  }
+
+  .compact-page-shell .report-controls {
+    gap: 7px;
+  }
+
+  .compact-page-shell .report-hero .month-picker {
+    padding: 7px;
+    border-radius: 10px;
+  }
+
+  .compact-page-shell .export-actions {
+    gap: 6px;
+  }
+
+  .compact-page-shell .month-picker,
+  .compact-page-shell .form-grid label,
+  .compact-page-shell .field-block {
+    gap: 5px;
+  }
+
+  .compact-page-shell .month-picker span,
+  .compact-page-shell .form-grid span,
+  .compact-page-shell .field-block span {
+    font-size: 10px;
+  }
+
+  .compact-page-shell input,
+  .compact-page-shell textarea {
+    min-height: 32px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .app.compact-view .modal {
+    width: min(520px, 100%);
+    padding: 13px;
+    border-radius: 14px;
+  }
+
+  .app.compact-view .modal-head {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .app.compact-view .modal-head h3 {
+    font-size: 17px;
+  }
+
+  .app.compact-view .form-grid {
+    gap: 9px;
+  }
+
+  .app.compact-view .form-grid span,
+  .app.compact-view .field-block span,
+  .app.compact-view .month-picker span {
+    font-size: 11px;
+  }
+
+  .app.compact-view input,
+  .app.compact-view textarea {
+    min-height: 32px;
+    padding: 6px 9px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .app.compact-view textarea {
+    min-height: 64px;
+  }
+
+  .app.compact-view .image-editor {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 9px;
+    padding: 9px;
+    border-radius: 11px;
+  }
+
+  .app.compact-view .image-editor .product-image {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+  }
+
+  .app.compact-view .summary-box {
+    gap: 3px;
+    padding: 9px;
+    border-radius: 10px;
+    margin-bottom: 9px;
+  }
+
+  .app.compact-view .summary-box span,
+  .app.compact-view .add-inventory-summary span {
+    font-size: 11px;
+  }
+
+  .app.compact-view .modal-actions {
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .app.compact-view .modal .btn,
+  .app.compact-view .modal .upload-button,
+  .app.compact-view .modal .icon-btn {
+    min-height: 32px;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+
+  .app.compact-view .modal .icon-btn {
+    width: 32px;
+    padding: 0;
+  }
+
 }
 
 @media (max-width: 1320px) {
@@ -1716,10 +2319,6 @@ input:disabled {
   .main {
     gap: 18px;
     padding: 22px 18px 112px;
-  }
-
-  .app-footer {
-    display: none;
   }
 
   .page-intro {
@@ -1943,14 +2542,14 @@ input:disabled {
 
   .product-image.large {
     width: 100%;
-    height: clamp(118px, 24vw, 170px);
+    height: clamp(128px, 24vw, 190px);
     border-width: 0 0 1px;
     border-radius: 0;
   }
 
   .inventory-card-body {
-    gap: 10px;
-    padding: 12px;
+    gap: 12px;
+    padding: 13px;
   }
 
   .inventory-title-row {
@@ -1964,8 +2563,10 @@ input:disabled {
     line-height: 1.22;
   }
 
-  .inventory-title-row > strong {
-    font-size: 13px;
+  .price-pill {
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 14px;
   }
 
   .stock-chip {
@@ -1985,32 +2586,60 @@ input:disabled {
   }
 
   .inventory-stats span {
-    min-height: 58px;
-    padding: 8px 5px;
+    min-height: 50px;
+    padding: 7px 5px;
     border-radius: 12px;
     text-align: center;
     font-size: 10px;
   }
 
   .inventory-stats strong {
-    font-size: 22px;
+    font-size: 19px;
   }
 
   .inventory-card-actions {
     display: grid;
-    grid-template-columns: 42px 42px minmax(0, 1fr);
+    grid-template-columns: minmax(86px, auto) minmax(0, 0.78fr);
     gap: 8px;
     margin-left: 0;
-    padding: 0 12px 12px;
+    padding: 0 13px 13px;
   }
 
-  .inventory-card-actions .icon-btn,
   .inventory-card-actions .btn {
-    min-height: 44px;
+    min-height: 40px;
+    padding-inline: 10px;
   }
 
-  .inventory-card-actions .icon-btn {
-    width: 42px;
+  .cancelled-card .inventory-card-actions {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .cancelled-card .inventory-card-actions .btn {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .cancelled-card .cancelled-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cancelled-card .cancelled-stats span {
+    min-height: 48px;
+  }
+
+  .cancelled-card .cancelled-stats strong {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+
+  .cancelled-card .cancelled-stats span:last-child strong {
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .inventory-title-actions .icon-btn {
+    width: 34px;
+    min-height: 34px;
   }
 
   .metric-grid,
@@ -2383,19 +3012,21 @@ input:disabled {
 
   .product-image.large {
     width: 100%;
-    height: 120px;
+    height: 128px;
   }
 
   .inventory-card-body {
-    padding: 10px;
+    padding: 11px;
   }
 
   .inventory-title-row h4 {
     font-size: 13px;
   }
 
-  .inventory-title-row > strong {
-    font-size: 12px;
+  .price-pill {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   .profit-line,
@@ -2408,18 +3039,26 @@ input:disabled {
   }
 
   .inventory-stats span {
-    min-height: 54px;
-    padding: 7px 4px;
+    min-height: 48px;
+    padding: 6px 4px;
     font-size: 9px;
   }
 
   .inventory-stats strong {
-    font-size: 19px;
+    font-size: 17px;
+  }
+
+  .cancelled-card .cancelled-stats span:last-child strong {
+    font-size: 10px;
   }
 
   .inventory-card-actions {
     margin-left: 0;
     padding-left: 0;
+  }
+
+  .export-actions {
+    grid-template-columns: 1fr;
   }
 
   .client-form,
@@ -2463,7 +3102,7 @@ input:disabled {
 
   .product-image.large {
     width: 100%;
-    height: 108px;
+    height: 112px;
   }
 
   .inventory-card-body {
@@ -2472,6 +3111,14 @@ input:disabled {
 
   .inventory-stats {
     grid-template-columns: 1fr;
+  }
+
+  .cancelled-card .inventory-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cancelled-card .cancelled-stats span:last-child strong {
+    font-size: 9px;
   }
 
   .inventory-card-actions {

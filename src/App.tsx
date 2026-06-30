@@ -7,6 +7,7 @@ import {
   Check,
   CircleDollarSign,
   ClipboardList,
+  Download,
   Edit3,
   Image as ImageIcon,
   Loader2,
@@ -142,12 +143,170 @@ const navItems: { label: string; page: Page; icon: typeof LayoutDashboard }[] = 
 ]
 
 const amount = (value: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
-const priceLabel = (product: Product) =>
-  [amount(product.price), product.priceUnit?.trim()].filter(Boolean).join(' ')
-const moneyLabel = (value: number, unit?: string) => [amount(value), unit?.trim()].filter(Boolean).join(' ')
+const moneyLabel = (value: number) => `${amount(value)} MMK`
+const priceLabel = (product: Product) => moneyLabel(product.price)
 const profitAmount = (quantity: number, salePrice: number, costPrice: number) => quantity * (salePrice - costPrice)
 
 const remainingQuantity = (product: Product) => Math.max(0, product.totalQuantity - product.soldQuantity)
+
+type ExcelCell = string | number
+
+type ExcelSheet = {
+  name: string
+  rows: ExcelCell[][]
+}
+
+type ExportReportSnapshot = {
+  productsAdded: Product[]
+  soldItems: SoldItem[]
+  cancelledItems: CancelledItem[]
+  soldTransactions: number
+  productsSold: number
+  cancelledQuantity: number
+  remainingStock?: number
+  revenue: number
+  cost: number
+  activeProfit: number
+  cancelledProfitImpact: number
+  netProfit: number
+}
+
+const xmlEscape = (value: ExcelCell) =>
+  String(value ?? '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+
+const excelSheetName = (name: string) => xmlEscape(name.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Sheet')
+const fileSafe = (value: string) => value.replace(/[\\/:*?"<>|]+/g, '-')
+
+const buildExcelWorkbook = (sheets: ExcelSheet[]) => `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#26334A"/>
+   <Interior ss:Color="#DCE8FB" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ ${sheets
+   .map(
+     (sheet) => `<Worksheet ss:Name="${excelSheetName(sheet.name)}">
+  <Table>
+   ${sheet.rows
+     .map((row, rowIndex) => {
+       const isHeader = rowIndex === 0 || row[0] === 'Metric'
+       return `<Row>${row
+         .map((cell) => {
+           const isNumber = typeof cell === 'number' && Number.isFinite(cell)
+           return `<Cell${isHeader ? ' ss:StyleID="Header"' : ''}><Data ss:Type="${isNumber ? 'Number' : 'String'}">${isNumber ? cell : xmlEscape(cell)}</Data></Cell>`
+         })
+         .join('')}</Row>`
+     })
+     .join('')}
+  </Table>
+ </Worksheet>`,
+   )
+   .join('')}
+</Workbook>`
+
+const downloadExcelWorkbook = (fileName: string, sheets: ExcelSheet[]) => {
+  const blob = new Blob([buildExcelWorkbook(sheets)], { type: 'application/vnd.ms-excel;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = `${fileSafe(fileName)}.xls`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+const buildReportWorkbookSheets = (reportType: 'Daily' | 'Monthly', period: string, snapshot: ExportReportSnapshot): ExcelSheet[] => {
+  const summaryRows: ExcelCell[][] = [
+    ['InventoryPro Report', reportType],
+    ['Period', period],
+    [],
+    ['Metric', 'Value'],
+    ['Products Added', snapshot.productsAdded.length],
+    ['Sold Transactions', snapshot.soldTransactions],
+    ['Products Sold', snapshot.productsSold],
+    ['Cancelled Quantity', snapshot.cancelledQuantity],
+  ]
+
+  if (typeof snapshot.remainingStock === 'number') {
+    summaryRows.push(['Current Remaining Stock', snapshot.remainingStock])
+  }
+
+  summaryRows.push(
+    ['Revenue (MMK)', snapshot.revenue],
+    ['Cost (MMK)', snapshot.cost],
+    ['Gross Profit (MMK)', snapshot.activeProfit],
+    ['Cancelled Impact (MMK)', snapshot.cancelledProfitImpact],
+    ['Net Profit (MMK)', snapshot.netProfit],
+  )
+
+  return [
+    {
+      name: 'Summary',
+      rows: summaryRows,
+    },
+    {
+      name: 'Products Added',
+      rows: [
+        ['Product Name', 'Type', 'Total Quantity', 'Sold Quantity', 'Remaining Quantity', 'Price (MMK)', 'Cost Price (MMK)', 'Added Date'],
+        ...snapshot.productsAdded.map((product) => [
+          product.name,
+          product.isRestock ? 'Re-stock' : 'Inventory',
+          product.totalQuantity,
+          product.soldQuantity,
+          remainingQuantity(product),
+          product.price,
+          product.costPrice,
+          product.addedDate,
+        ]),
+      ],
+    },
+    {
+      name: 'Products Sold',
+      rows: [
+        ['Product Name', 'Quantity Sold', 'Sell Price (MMK)', 'Cost Price (MMK)', 'Revenue (MMK)', 'Profit (MMK)', 'Date', 'Notes'],
+        ...snapshot.soldItems.map((item) => [
+          item.productName,
+          item.quantity,
+          item.salePrice,
+          item.costPrice,
+          item.quantity * item.salePrice,
+          profitAmount(item.quantity, item.salePrice, item.costPrice),
+          item.date,
+          item.notes || '-',
+        ]),
+      ],
+    },
+    {
+      name: 'Cancelled Items',
+      rows: [
+        ['Product Name', 'Quantity Cancelled', 'Sell Price (MMK)', 'Cost Price (MMK)', 'Reversed Profit (MMK)', 'Cancellation Date', 'Notes'],
+        ...snapshot.cancelledItems.map((item) => [
+          item.productName,
+          item.quantity,
+          item.salePrice,
+          item.costPrice,
+          profitAmount(item.quantity, item.salePrice, item.costPrice),
+          item.cancellationDate,
+          item.notes || '-',
+        ]),
+      ],
+    },
+  ]
+}
 
 function App() {
   const [page, setPage] = useState<Page>('Dashboard')
@@ -162,6 +321,7 @@ function App() {
   const [sellingProduct, setSellingProduct] = useState<Product | null>(null)
   const [cancellingSale, setCancellingSale] = useState<SoldItem | null>(null)
   const [selectedMonth, setSelectedMonth] = useState('2026-06')
+  const isCompactPage = page !== 'Dashboard'
 
   const dashboard = useMemo(() => {
     const totalProducts = products.length
@@ -386,7 +546,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${isCompactPage ? 'compact-view' : 'dashboard-view'}`}>
       <div className="app-frame">
         <aside className="sidebar">
           <div className="brand">
@@ -429,7 +589,7 @@ function App() {
               </div>
             </section>
             <section className="content">
-              <div className={`page-shell ${isPageLoading ? 'loading' : ''}`}>
+              <div className={`page-shell ${isPageLoading ? 'loading' : ''} ${isCompactPage ? 'compact-page-shell' : 'dashboard-page-shell'}`}>
                 {isPageLoading && (
                   <div className="loading-scrim" role="status" aria-label="Loading page">
                     <Loader2 />
@@ -440,6 +600,7 @@ function App() {
                     metrics={dashboard}
                     products={products}
                     soldItems={soldItems}
+                    onNavigate={switchPage}
                   />
                 )}
                 {page === 'Inventory' && (
@@ -492,14 +653,13 @@ function App() {
                     report={monthlyReport}
                     selectedMonth={selectedMonth}
                     setSelectedMonth={setSelectedMonth}
+                    products={products}
+                    soldItems={soldItems}
+                    cancelledItems={cancelledItems}
                   />
                 )}
               </div>
             </section>
-            <footer className="app-footer">
-              <span>© 2026 InventoryPro Admin. All rights reserved.</span>
-              <span>v1.0.0</span>
-            </footer>
           </main>
         </div>
       </div>
@@ -544,10 +704,12 @@ function Dashboard({
   metrics,
   products,
   soldItems,
+  onNavigate,
 }: {
   metrics: DashboardMetrics
   products: Product[]
   soldItems: SoldItem[]
+  onNavigate: (page: Page) => void
 }) {
   const [clients, setClients] = useState([
     { id: 1, name: 'Mandalay Office', phone: '09 450 112 884', note: 'Bulk cable buyer' },
@@ -570,45 +732,51 @@ function Dashboard({
   const dashboardCards = [
     {
       label: 'Total Amount',
-      value: amount(totalAmount),
+      value: moneyLabel(totalAmount),
       note: 'Inventory value + sold',
       icon: CircleDollarSign,
       tone: 'blue',
+      page: 'Inventory' as Page,
     },
     {
       label: 'Sold Amount',
-      value: amount(soldAmount),
+      value: moneyLabel(soldAmount),
       note: `${metrics.totalSold} units sold`,
       icon: TrendingUp,
       tone: 'green',
+      page: 'Sold Items' as Page,
     },
     {
       label: 'Total Cancel Item',
       value: amount(metrics.cancelledStock),
-      note: `${amount(metrics.cancelledProfitImpact)} reversed profit`,
+      note: `${moneyLabel(metrics.cancelledProfitImpact)} reversed profit`,
       icon: PackageX,
       tone: 'orange',
+      page: 'Cancelled Items' as Page,
     },
     {
       label: 'Profit Made',
-      value: amount(metrics.activeProfit),
-      note: `${amount(soldAmount)} - ${amount(totalCost)} (cost)`,
+      value: moneyLabel(metrics.activeProfit),
+      note: `${moneyLabel(soldAmount)} - ${moneyLabel(totalCost)} (cost)`,
       icon: ClipboardList,
       tone: 'purple',
+      page: 'Sold Items' as Page,
     },
     {
       label: 'Lost / Cancelled Impact',
-      value: amount(metrics.cancelledProfitImpact),
+      value: moneyLabel(metrics.cancelledProfitImpact),
       note: 'Profit removed',
       icon: TrendingDown,
       tone: 'red',
+      page: 'Cancelled Items' as Page,
     },
     {
       label: 'Net Profit',
-      value: amount(metrics.netProfit),
+      value: moneyLabel(metrics.netProfit),
       note: 'Profit after impact',
       icon: Wallet,
       tone: 'mint',
+      page: 'Monthly Report' as Page,
     },
   ]
 
@@ -638,20 +806,20 @@ function Dashboard({
         {dashboardCards.map((card) => {
           const Icon = card.icon
           return (
-            <article className="kpi-card" key={card.label}>
+            <button className="kpi-card dashboard-action-card" key={card.label} type="button" onClick={() => onNavigate(card.page)}>
               <div className={`kpi-icon ${card.tone}`}>
                 <Icon />
               </div>
               <span>{card.label}</span>
               <strong>{card.value}</strong>
               <small>{card.note}</small>
-            </article>
+            </button>
           )
         })}
       </section>
 
       <section className="dashboard-grid">
-        <article className="sales-visual-card">
+        <article className="sales-visual-card dashboard-action-panel" onClick={() => onNavigate('Sold Items')}>
           <div className="section-head">
             <h3>Monthly Sold Visualization</h3>
             <span>{monthlySoldQuantity} units in {currentMonth}</span>
@@ -671,7 +839,10 @@ function Dashboard({
               </div>
             ))}
           </div>
-          <button className="full-report" type="button" onClick={() => undefined}>
+          <button className="full-report" type="button" onClick={(event) => {
+            event.stopPropagation()
+            onNavigate('Monthly Report')
+          }}>
             View Full Report
             <Check />
           </button>
@@ -751,13 +922,13 @@ function InventoryTable({
       <section className="module-hero inventory-hero">
         <div>
           <h3>{products.length} product lines under watch.</h3>
-          <p>{totalRemaining} units available with {amount(totalValue)} estimated shelf value.</p>
+          <p>{totalRemaining} units available with {moneyLabel(totalValue)} estimated shelf value.</p>
         </div>
         <div className="inventory-hero-side">
           <div className="module-stats">
             <span><strong>{totalRemaining}</strong>Available</span>
             <span><strong>{lowStock}</strong>Low stock</span>
-            <span><strong>{amount(totalValue)}</strong>Value</span>
+            <span><strong>{moneyLabel(totalValue)}</strong>Value</span>
           </div>
           <div className="inventory-hero-actions">
             <button className="btn primary add-product-btn" type="button" onClick={onAdd}>
@@ -789,12 +960,21 @@ function InventoryTable({
                       <span className={`stock-chip ${statusClass}`}>{status}</span>
                       <h4>{product.name}</h4>
                     </div>
-                    <strong>{priceLabel(product)}</strong>
+                    <div className="inventory-title-actions">
+                      <button className="icon-btn" title="Edit product" onClick={(event) => {
+                        event.stopPropagation()
+                        onEdit(product)
+                      }}>
+                        <Edit3 />
+                      </button>
+                      <button className="icon-btn danger-icon" title="Delete product" onClick={(event) => {
+                        event.stopPropagation()
+                        onDelete(product)
+                      }}>
+                        <Trash2 />
+                      </button>
+                    </div>
                   </div>
-                  <p className="profit-line">
-                    {product.isRestock ? 'Re-stock batch - ' : ''}
-                    Cost {moneyLabel(product.costPrice, product.priceUnit)} - Profit per unit {moneyLabel(product.price - product.costPrice, product.priceUnit)}
-                  </p>
                   <div className="inventory-stats">
                     <span><strong>{remaining}</strong>Remaining</span>
                     <span><strong>{product.soldQuantity}</strong>Sold</span>
@@ -803,12 +983,7 @@ function InventoryTable({
                 </div>
               </button>
               <div className="row-actions inventory-card-actions">
-                <button className="icon-btn" title="Edit product" onClick={() => onEdit(product)}>
-                  <Edit3 />
-                </button>
-                <button className="icon-btn danger-icon" title="Delete product" onClick={() => onDelete(product)}>
-                  <Trash2 />
-                </button>
+                <strong className="price-pill">{priceLabel(product)}</strong>
                 <button className="btn primary" onClick={() => onSell(product)} disabled={remaining === 0}>
                   <ShoppingCart />
                   Sell
@@ -848,7 +1023,7 @@ function RestockItemsTable({
         <div className="inventory-hero-side">
           <div className="module-stats">
             <span><strong>{totalRemaining}</strong>Available</span>
-            <span><strong>{amount(totalValue)}</strong>Value</span>
+            <span><strong>{moneyLabel(totalValue)}</strong>Value</span>
             <span><strong>{products.length}</strong>Batches</span>
           </div>
           <button className="btn" type="button" onClick={onBack}>
@@ -875,15 +1050,25 @@ function RestockItemsTable({
                   <ProductImage product={product} variant="large" />
                   <div className="inventory-card-body">
                     <div className="inventory-title-row">
-                      <div>
-                        <span className="stock-chip restock">Re-stock</span>
-                        <h4>{product.name}</h4>
-                      </div>
-                      <strong>{priceLabel(product)}</strong>
+                    <div>
+                      <span className="stock-chip restock">Re-stock</span>
+                      <h4>{product.name}</h4>
                     </div>
-                    <p className="profit-line">
-                      Separate batch - Cost {moneyLabel(product.costPrice, product.priceUnit)} - Profit per unit {moneyLabel(product.price - product.costPrice, product.priceUnit)}
-                    </p>
+                      <div className="inventory-title-actions">
+                        <button className="icon-btn" title="Edit re-stock item" onClick={(event) => {
+                          event.stopPropagation()
+                          onEdit(product)
+                        }}>
+                          <Edit3 />
+                        </button>
+                        <button className="icon-btn danger-icon" title="Delete re-stock item" onClick={(event) => {
+                          event.stopPropagation()
+                          onDelete(product)
+                        }}>
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </div>
                     <div className="inventory-stats">
                       <span><strong>{remaining}</strong>Remaining</span>
                       <span><strong>{product.soldQuantity}</strong>Sold</span>
@@ -892,12 +1077,7 @@ function RestockItemsTable({
                   </div>
                 </button>
                 <div className="row-actions inventory-card-actions">
-                  <button className="icon-btn" title="Edit re-stock item" onClick={() => onEdit(product)}>
-                    <Edit3 />
-                  </button>
-                  <button className="icon-btn danger-icon" title="Delete re-stock item" onClick={() => onDelete(product)}>
-                    <Trash2 />
-                  </button>
+                  <strong className="price-pill">{priceLabel(product)}</strong>
                   <button className="btn primary" onClick={() => onSell(product)} disabled={remaining === 0}>
                     <ShoppingCart />
                     Sell
@@ -944,12 +1124,12 @@ function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItemView[]; on
       <section className="module-hero sales-hero">
         <div>
           <h3>{soldItems.length} transactions captured.</h3>
-          <p>{amount(totalRevenue)} revenue with {amount(totalProfit)} profit across active sold records.</p>
+          <p>{moneyLabel(totalRevenue)} revenue with {moneyLabel(totalProfit)} profit across active sold records.</p>
         </div>
         <div className="module-stats">
           <span><strong>{soldItems.length}</strong>Orders</span>
-          <span><strong>{amount(totalRevenue)}</strong>Revenue</span>
-          <span><strong>{amount(totalProfit)}</strong>Profit</span>
+          <span><strong>{moneyLabel(totalRevenue)}</strong>Revenue</span>
+          <span><strong>{moneyLabel(totalProfit)}</strong>Profit</span>
         </div>
       </section>
 
@@ -972,10 +1152,10 @@ function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItemView[]; on
               <tr key={item.id}>
                 <td><strong>{item.productName}</strong></td>
                 <td>{item.quantity}</td>
-                <td>{moneyLabel(item.salePrice, item.priceUnit)}</td>
-                <td>{moneyLabel(item.costPrice, item.priceUnit)}</td>
+                <td>{moneyLabel(item.salePrice)}</td>
+                <td>{moneyLabel(item.costPrice)}</td>
                 <td className={profitAmount(item.quantity, item.salePrice, item.costPrice) >= 0 ? 'profit-positive' : 'profit-negative'}>
-                  {moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)}
+                  {moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))}
                 </td>
                 <td>{item.date}</td>
                 <td>{item.notes || '-'}</td>
@@ -999,12 +1179,12 @@ function SoldItemsTable({ soldItems, onCancel }: { soldItems: SoldItemView[]; on
               <strong>{item.productName}</strong>
               <div className="sold-mobile-stats">
                 <span><small>Qty Sold</small>{item.quantity}</span>
-                <span><small>Sell Price</small>{moneyLabel(item.salePrice, item.priceUnit)}</span>
+                <span><small>Sell Price</small>{moneyLabel(item.salePrice)}</span>
               </div>
             </div>
             <div className="sold-mobile-profit">
               <small>Profit</small>
-              <strong>{moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)}</strong>
+              <strong>{moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))}</strong>
               <button className="btn danger" onClick={() => onCancel(item)}>
                 <Ban />
                 Cancel
@@ -1041,12 +1221,12 @@ function CancelledItemsTable({
       <section className="module-hero returns-hero">
         <div>
           <h3>{cancelledQuantity} units waiting for a decision.</h3>
-          <p>{amount(cancelledImpact)} profit currently reversed by cancelled sales.</p>
+          <p>{moneyLabel(cancelledImpact)} profit currently reversed by cancelled sales.</p>
         </div>
         <div className="module-stats">
           <span><strong>{cancelledItems.length}</strong>Records</span>
           <span><strong>{cancelledQuantity}</strong>Units</span>
-          <span><strong>{amount(cancelledImpact)}</strong>Impact</span>
+          <span><strong>{moneyLabel(cancelledImpact)}</strong>Impact</span>
         </div>
       </section>
 
@@ -1068,11 +1248,8 @@ function CancelledItemsTable({
                       <span className="stock-chip low">Return</span>
                       <h4>{item.productName}</h4>
                     </div>
-                    <strong>{moneyLabel(item.salePrice, item.priceUnit)}</strong>
+                    <strong className="price-pill">{moneyLabel(item.salePrice)}</strong>
                   </div>
-                  <p className="profit-line loss">
-                    Cost {moneyLabel(item.costPrice, item.priceUnit)} - Reversed profit {moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)}
-                  </p>
                   <div className="inventory-stats cancelled-stats">
                     <span><strong>{item.quantity}</strong>Cancelled</span>
                     <span><strong>{item.cancellationDate}</strong>Date</span>
@@ -1100,6 +1277,9 @@ function MonthlyReport({
   report,
   selectedMonth,
   setSelectedMonth,
+  products,
+  soldItems,
+  cancelledItems,
 }: {
   report: {
     productsAdded: Product[]
@@ -1116,18 +1296,96 @@ function MonthlyReport({
   }
   selectedMonth: string
   setSelectedMonth: (month: string) => void
+  products: Product[]
+  soldItems: SoldItem[]
+  cancelledItems: CancelledItem[]
 }) {
+  const [selectedDay, setSelectedDay] = useState(today)
+  const dailySnapshot = useMemo<ExportReportSnapshot>(() => {
+    const productsAdded = products.filter((product) => product.addedDate === selectedDay)
+    const soldToday = soldItems.filter((item) => item.date === selectedDay)
+    const cancelledToday = cancelledItems.filter((item) => item.cancellationDate === selectedDay)
+    const productsSold = soldToday.reduce((sum, item) => sum + item.quantity, 0)
+    const cancelledQuantity = cancelledToday.reduce((sum, item) => sum + item.quantity, 0)
+    const revenue = soldToday.reduce((sum, item) => sum + item.quantity * item.salePrice, 0)
+    const cost = soldToday.reduce((sum, item) => sum + item.quantity * item.costPrice, 0)
+    const activeProfit = revenue - cost
+    const cancelledProfitImpact = cancelledToday.reduce(
+      (sum, item) => sum + profitAmount(item.quantity, item.salePrice, item.costPrice),
+      0,
+    )
+
+    return {
+      productsAdded,
+      soldItems: soldToday,
+      cancelledItems: cancelledToday,
+      soldTransactions: soldToday.length,
+      productsSold,
+      cancelledQuantity,
+      revenue,
+      cost,
+      activeProfit,
+      cancelledProfitImpact,
+      netProfit: activeProfit - cancelledProfitImpact,
+    }
+  }, [cancelledItems, products, selectedDay, soldItems])
+
+  const monthlySnapshot: ExportReportSnapshot = {
+    productsAdded: report.productsAdded,
+    soldItems: report.soldThisMonth,
+    cancelledItems: report.cancelledThisMonth,
+    soldTransactions: report.soldThisMonth.length,
+    productsSold: report.productsSold,
+    cancelledQuantity: report.cancelledQuantity,
+    remainingStock: report.remainingStock,
+    revenue: report.revenue,
+    cost: report.cost,
+    activeProfit: report.activeProfit,
+    cancelledProfitImpact: report.cancelledProfitImpact,
+    netProfit: report.netProfit,
+  }
+
+  const exportDailyReport = () => {
+    downloadExcelWorkbook(
+      `inventory-daily-report-${selectedDay}`,
+      buildReportWorkbookSheets('Daily', selectedDay, dailySnapshot),
+    )
+  }
+
+  const exportMonthlyReport = () => {
+    downloadExcelWorkbook(
+      `inventory-monthly-report-${selectedMonth}`,
+      buildReportWorkbookSheets('Monthly', selectedMonth, monthlySnapshot),
+    )
+  }
+
   return (
     <div className="report-layout">
       <section className="module-hero report-hero">
         <div>
           <h3>{selectedMonth} operating report.</h3>
-          <p>{report.productsSold} units sold, {report.cancelledQuantity} cancelled, and {amount(report.netProfit)} net profit.</p>
+          <p>{report.productsSold} units sold, {report.cancelledQuantity} cancelled, and {moneyLabel(report.netProfit)} net profit.</p>
         </div>
-        <label className="month-picker">
-          <span>Selected month</span>
-          <input type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />
-        </label>
+        <div className="report-controls">
+          <label className="month-picker">
+            <span>Selected month</span>
+            <input type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />
+          </label>
+          <label className="month-picker">
+            <span>Selected day</span>
+            <input type="date" value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} />
+          </label>
+          <div className="export-actions">
+            <button className="btn" type="button" onClick={exportDailyReport}>
+              <Download />
+              Daily Excel
+            </button>
+            <button className="btn primary" type="button" onClick={exportMonthlyReport}>
+              <Download />
+              Monthly Excel
+            </button>
+          </div>
+        </div>
       </section>
 
       <div className="metric-grid compact">
@@ -1149,23 +1407,23 @@ function MonthlyReport({
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Revenue</span><TrendingUp /></div>
-          <strong>{amount(report.revenue)}</strong>
+          <strong>{moneyLabel(report.revenue)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Cost</span><ClipboardList /></div>
-          <strong>{amount(report.cost)}</strong>
+          <strong>{moneyLabel(report.cost)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Gross Profit</span><TrendingUp /></div>
-          <strong>{amount(report.activeProfit)}</strong>
+          <strong>{moneyLabel(report.activeProfit)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Cancelled Impact</span><TrendingDown /></div>
-          <strong>{amount(report.cancelledProfitImpact)}</strong>
+          <strong>{moneyLabel(report.cancelledProfitImpact)}</strong>
         </article>
         <article className="card metric-card">
           <div className="metric-label"><span>Net Profit</span><Check /></div>
-          <strong>{amount(report.netProfit)}</strong>
+          <strong>{moneyLabel(report.netProfit)}</strong>
         </article>
       </div>
 
@@ -1192,7 +1450,7 @@ function MonthlyReport({
           empty="No products were sold in this month."
           rows={report.soldThisMonth.map((item) => ({
             title: item.productName,
-            detail: `${item.quantity} sold - sell ${moneyLabel(item.salePrice, item.priceUnit)} - cost ${moneyLabel(item.costPrice, item.priceUnit)} - profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)}`,
+            detail: `${item.quantity} sold - sell ${moneyLabel(item.salePrice)} - cost ${moneyLabel(item.costPrice)} - profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))}`,
           }))}
         />
       </div>
@@ -1206,7 +1464,7 @@ function MonthlyReport({
           empty="No cancelled sales in this month."
           rows={report.cancelledThisMonth.map((item) => ({
             title: item.productName,
-            detail: `${item.quantity} cancelled - reversed profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice), item.priceUnit)} - ${item.notes || 'No notes'}`,
+            detail: `${item.quantity} cancelled - reversed profit ${moneyLabel(profitAmount(item.quantity, item.salePrice, item.costPrice))} - ${item.notes || 'No notes'}`,
           }))}
         />
       </div>
@@ -1306,10 +1564,6 @@ function EditProductModal({
             <span>Cost Price</span>
             <input type="number" min="0" value={draft.costPrice} onChange={(event) => update('costPrice', event.target.value)} />
           </label>
-          <label>
-            <span>Unit</span>
-            <input value={draft.priceUnit ?? ''} onChange={(event) => update('priceUnit', event.target.value)} placeholder="Optional" />
-          </label>
         </div>
         <div className="modal-actions">
           <button className="btn" onClick={onClose}>Cancel</button>
@@ -1392,10 +1646,6 @@ function EditCancelledItemModal({
             <input type="number" min="0" value={draft.costPrice} onChange={(event) => update('costPrice', event.target.value)} />
           </label>
           <label>
-            <span>Unit</span>
-            <input value={draft.priceUnit ?? ''} onChange={(event) => update('priceUnit', event.target.value)} placeholder="Optional" />
-          </label>
-          <label>
             <span>Cancellation Date</span>
             <input type="date" value={draft.cancellationDate} onChange={(event) => update('cancellationDate', event.target.value)} />
           </label>
@@ -1441,7 +1691,7 @@ function AddCancelledToInventoryModal({
               <strong>{item.productName}</strong>
               <span>{item.quantity} cancelled units available</span>
               <span>This creates a separate re-stock item with its own selling price.</span>
-              <span>Cost {moneyLabel(item.costPrice, item.priceUnit)}</span>
+              <span>Cost {moneyLabel(item.costPrice)}</span>
             </div>
           </div>
           <label>
@@ -1515,15 +1765,15 @@ function SellProductModal({
           </label>
           <label>
             <span>Selling Price</span>
-            <input value={moneyLabel(product.price, product.priceUnit)} disabled />
+            <input value={moneyLabel(product.price)} disabled />
           </label>
           <label>
             <span>Cost Price</span>
-            <input value={moneyLabel(product.costPrice, product.priceUnit)} disabled />
+            <input value={moneyLabel(product.costPrice)} disabled />
           </label>
           <div className={`summary-box full ${profit >= 0 ? 'profit-summary' : 'loss-summary'}`}>
-            <strong>{moneyLabel(profit, product.priceUnit)} estimated profit</strong>
-            <span>{quantity} units x ({moneyLabel(product.price, product.priceUnit)} - {moneyLabel(product.costPrice, product.priceUnit)})</span>
+            <strong>{moneyLabel(profit)} estimated profit</strong>
+            <span>{quantity} units x ({moneyLabel(product.price)} - {moneyLabel(product.costPrice)})</span>
           </div>
           <label className="full">
             <span>Notes</span>
@@ -1565,7 +1815,7 @@ function CancelSaleModal({
           <strong>{sale.productName}</strong>
           <span>{sale.quantity} sold on {sale.date}</span>
           <span>
-            Cancelling {quantity} reverses {moneyLabel(reversedProfit, sale.priceUnit)} profit
+            Cancelling {quantity} reverses {moneyLabel(reversedProfit)} profit
           </span>
         </div>
         <label className="field-block">
@@ -1598,3 +1848,4 @@ function CancelSaleModal({
 }
 
 export default App
+
